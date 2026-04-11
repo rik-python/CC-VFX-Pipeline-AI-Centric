@@ -601,7 +601,7 @@ class ComfyCompositorPanel(QtWidgets.QWidget):
                 return
 
         self._generate_btn.setEnabled(False)
-        self._status_label.setText("Submitting...")
+        self._status_label.setText("Preparing...")
         self._status_label.setStyleSheet("color: #00d4ff; font-size: 11px;")
 
         threading.Thread(
@@ -629,10 +629,11 @@ class ComfyCompositorPanel(QtWidgets.QWidget):
             patched = patch_workflow(workflow, manifest, param_values, uploaded)
 
             # Submit
-            self.status_signal.emit("Job submitted — waiting for result...")
+            self.status_signal.emit("Submitting...")
             prompt_id = submit_workflow(patched)
 
             # Poll
+            self.status_signal.emit("Working...")
             output_node = manifest.get("output_node", "9")
             filename = poll_result(prompt_id, output_node)
 
