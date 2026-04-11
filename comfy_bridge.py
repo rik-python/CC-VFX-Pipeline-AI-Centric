@@ -186,8 +186,10 @@ def render_node_to_temp(node_name):
     write["file_type"].setValue("png")
     write.setInput(0, node)
     frame = nuke.frame()
-    nuke.execute(write, frame, frame)
-    nuke.delete(write)
+    try:
+        nuke.execute(write, frame, frame)
+    finally:
+        nuke.delete(write)
     return temp_path
 
 
@@ -359,8 +361,17 @@ class ComfyCompositorPanel(QtWidgets.QWidget):
         self.error_signal.connect(self._on_error)
 
     # ── Connection ───────────────────────────────────────────────────────────
+    connection_signal = QtCore.Signal(bool)
+
     def _check_connection(self):
-        if check_comfy_connection():
+        def _check():
+            result = check_comfy_connection()
+            self.connection_signal.emit(result)
+        self.connection_signal.connect(self._on_connection_result)
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _on_connection_result(self, connected):
+        if connected:
             self._status_dot.setStyleSheet("color: #00d4ff; font-size: 16px;")
             self._status_dot.setToolTip("Connected to ComfyUI")
         else:
@@ -396,7 +407,7 @@ class ComfyCompositorPanel(QtWidgets.QWidget):
             prefix = "\u25bc " if item.isExpanded() else "\u25b6 "
             text = item.text(0)
             # Strip old prefix and apply new one
-            clean = text.lstrip("\u25bc \u25b6 ").strip()
+            clean = text[2:].strip()
             item.setText(0, prefix + clean)
             return
         self._current_manifest = manifest
