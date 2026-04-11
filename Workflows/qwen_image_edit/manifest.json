@@ -1,0 +1,15 @@
+{
+  "name": "Qwen Image Edit",
+  "category": "Image to Image",
+  "description": "Edit an image using a text prompt with optional reference image.",
+  "inputs": [
+    {"label": "Source Image", "node": "41", "field": "image"},
+    {"label": "Reference",   "node": "83", "field": "image"}
+  ],
+  "parameters": [
+    {"label": "Prompt", "node": "170:151", "field": "prompt", "type": "text"},
+    {"label": "Shift",  "node": "170:145", "field": "shift",  "type": "float", "default": 3.1,  "min": 0.0, "max": 10.0, "step": 0.1},
+    {"label": "Seed",   "node": "170:169", "field": "seed",   "type": "seed",  "default": 0}
+  ],
+  "output_node": "9"
+}
