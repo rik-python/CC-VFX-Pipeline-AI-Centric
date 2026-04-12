@@ -59,9 +59,16 @@ def discover_workflows(workflows_dir):
             continue
         workflow_path = os.path.join(subdir, "workflow.json")
         if not os.path.isfile(workflow_path):
-            continue
+            # Fallback: find any .json that isn't manifest.json
+            candidates = [
+                f for f in os.listdir(subdir)
+                if f.endswith(".json") and f != "manifest.json"
+            ]
+            if not candidates:
+                continue
+            workflow_path = os.path.join(subdir, candidates[0])
 
-        info = {"_dir": subdir}
+        info = {"_dir": subdir, "_workflow_path": workflow_path}
 
         manifest_path = os.path.join(subdir, "manifest.json")
         if os.path.isfile(manifest_path):
@@ -560,7 +567,7 @@ class ComfyCompositorPanel(QtWidgets.QWidget):
         self._wf_info.setStyleSheet("color: #ccc; font-size: 11px; font-style: normal;")
 
         # Load and analyze workflow
-        wf_path = os.path.join(data["_dir"], "workflow.json")
+        wf_path = data.get("_workflow_path", os.path.join(data["_dir"], "workflow.json"))
         with open(wf_path, "r") as f:
             self._current_workflow = json.load(f)
 
