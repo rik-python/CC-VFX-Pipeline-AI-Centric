@@ -1,75 +1,72 @@
-# CC Pipeline (AI Centric)
+<div align="center">
 
-**Version 1**
+# 🎬 CC Pipeline (AI Centric)
 
-A **free VFX pipeline for freelancers**, built around Nuke.
-(Comfy Compositing pipeline. Repo: `CC-VFX-Pipeline-AI-Centric`.)
+**A free, dead-simple VFX pipeline for freelance Nuke teams.**
+One shared config → identical folders, enforced names, and auto-set renders for every artist.
 
-One shared config builds an identical folder structure and enforces naming + versioning for every
-artist on a show, and a Nuke menu saves scripts and renders (EXR + MOV) into the right place
-automatically. No more files saved in the wrong place or named inconsistently.
+![Nuke](https://img.shields.io/badge/Nuke-13%2B-orange)
+![Python](https://img.shields.io/badge/Python-3-blue)
+![Color](https://img.shields.io/badge/Color-ACEScg%20%2F%20OCIO-green)
+![Deps](https://img.shields.io/badge/deps-stdlib%20only-success)
+![Tests](https://img.shields.io/badge/tests-46%20passing-brightgreen)
 
-Designed so a non-technical artist can clone it and be running in about 5 minutes.
+*Comfy Compositing · Version 1 · Repo `CC-VFX-Pipeline-AI-Centric`*
 
----
-
-## What you get
-
-- Standard folder tree per `show / part / seq / shot`, created with one command.
-- Enforced naming: `shwx_101_010_0010_comp_WIP_rikinp_v01` (`show_part_seq_shot_task_type_artist_version`).
-- Auto-versioning per shot+task. The Nuke **script** version drives the **render** version, so a
-  `comp_v03` script always produces `comp_v03` renders.
-- Task-centric shots: shared folders (plates/review/delivery/elements) at shot level, and one
-  self-contained folder per task (**Prep / RotoPaint / AI / Comp**) holding its nk/render/precomp/cache.
-- Nuke menu with **New Shot**, **Pipeline Save Script** (per task), and **Pipeline Write (EXR + MOV)**,
-  with dropdown pickers for show/part/seq/shot and type on save (no typing).
-- Everyone who points at the same shared drive sees the same shots and names.
+</div>
 
 ---
 
-## Requirements
+## ✨ What it does
 
-- **Nuke** (13+ recommended).
-- **Python 3** on your PATH (for the installer / command-line setup; Nuke uses its own embedded Python).
-- **git** (for the one-click updater).
-- A **shared drive** for team work (Dropbox / Google Drive / LucidLink). Everyone mounts the same
-  one.
+| | |
+|---|---|
+| 📁 **Same folders for everyone** | One command builds an identical `show / part / seq / shot` tree on every machine. |
+| 🏷️ **Enforced naming** | `shwx_101_010_0010_comp_WIP_rikinp_v03` — automatic, never typed by hand. |
+| 🔢 **Auto-versioning** | The Nuke **script** version drives the **render** version. `comp_v03` script → `comp_v03` renders. |
+| 💾 **Save + Render from a menu** | Save Script and a one-click **EXR + MOV** Write, named and placed for you. |
+| 🎨 **ACEScg by default** | Sets OCIO + the ACES config on launch, so color just works. |
+| 🔄 **One-click updates** | Double-click to pull the latest and sync new folders into existing shots. |
 
-No pip installs. The pipeline code is pure standard library.
+No pip installs. Pure standard library. A non-technical artist can be running in ~5 minutes.
 
 ---
 
-## Install (about 5 minutes)
+## 🎞️ The shot workflow
 
-**1. Clone the repo**
-```bash
-git clone https://github.com/rik-python/CC-VFX-Pipeline-AI-Centric.git
+```mermaid
+flowchart LR
+    PLATE[🎥 Plate in] --> PREP[Prep] --> ROTO[RotoPaint] --> AI[AI] --> COMP[Comp] --> REV[Review] --> DEL[📦 Delivery]
 ```
 
-**2. Run the installer.** Double-click **`install.bat`** (Windows) or **`install.command`** (mac;
-first time run `chmod +x install.command` once). It asks for:
-- your **artist / user name** (the name stamped into filenames),
-- the **shared-drive folder** that holds all shows, and the **show code**,
-- your **Nuke folder** (default `~/.nuke`).
+Each stage is a **task** with its own folder; renders from any task land in `<task>/render/<name>/{exr,mov}`.
 
-Then it saves your settings, wires Nuke (adds `pluginAddPath` to `init.py`), checks dependencies
-(Python, git, the shared drive), offers to create the show folders, and runs the doctor.
-Re-running it is safe.
+---
 
-**3. Restart Nuke.** You'll see the **CC VFX Menu** in the top menu bar.
+## 🚀 Quick start
+
+> **1. Clone**
+> ```bash
+> git clone https://github.com/rik-python/CC-VFX-Pipeline-AI-Centric.git
+> ```
+> **2. Run the installer** — double-click **`install.bat`** (Windows) or **`install.command`** (mac).
+> It asks for your **name**, the **shared-drive folder + show code**, and your **Nuke folder**, then
+> wires everything up and checks your setup.
+>
+> **3. Restart Nuke** — you'll see the **CC VFX Menu** in the top menu bar. Done. 🎉
 
 <details>
-<summary>Manual setup (if you'd rather not use the installer)</summary>
+<summary>Prefer to set it up by hand? (manual setup)</summary>
 
-Add this line to `~/.nuke/init.py`, using your clone path:
+Add this to `~/.nuke/init.py`, using your clone path:
 ```python
 nuke.pluginAddPath(r"C:\path\to\CC-VFX-Pipeline-AI-Centric")
 ```
 Then, in the repo folder:
 ```bash
-python pipeline_core.py config root D:/Work/projects   # the folder that holds all your shows
-python pipeline_core.py config show shwx               # current show code
-python pipeline_core.py config artist rikinp           # your artist name
+python pipeline_core.py config root D:/Work/projects   # folder that holds all your shows
+python pipeline_core.py config show shwx               # show code
+python pipeline_core.py config artist rikinp           # your name
 python pipeline_core.py doctor                         # check it
 ```
 Restart Nuke.
@@ -77,149 +74,142 @@ Restart Nuke.
 
 ---
 
-## Updating
+## 🧭 Daily use (from the **CC VFX Menu**)
+
+**🆕 New Shot** — pick/enter part / seq / shot; builds the full folder tree.
+
+**💾 Pipeline Save Script → Prep / RotoPaint / AI / Comp**
+Pick a **type** (WIP / CF / TF / …). Saves into that task's `nk/` folder, auto-named + auto-versioned:
+```
+…\shwx\101\010\0010\comp\nk\shwx_101_010_0010_comp_WIP_rikinp_v01.nk
+```
+
+**🎬 Pipeline Write (EXR + MOV)**
+No picking. Reads your open script and drops **two** Write nodes that mirror it exactly:
+```
+…\comp\render\shwx_101_010_0010_comp_WIP_rikinp_v03\
+    exr\  …_v03.%04d.exr      ← frames
+    mov\  …_v03.mov           ← review movie
+```
+Press **Render** (F7). *(If the script isn't pipeline-named yet, it just says "Save Script first".)*
+
+> **WIP → Creative Final?** Save Script again, pick type **CF**. The version auto-bumps. Type is a
+> free label; the version always climbs per shot+task.
+
+---
+
+## 📂 Folder structure
+
+Full tree and every folder's purpose: **[FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md)**.
+
+```
+<root>/<show>/<part>/<seq>/<shot>/
+│
+├── plates/        review/   delivery/   elements/      ← shared across tasks
+│
+├── prep/          nk/  render/  precomp/  cache/        ┐
+├── rotopaint/     nk/  render/  precomp/  cache/        │  one self-contained
+├── ai/            nk/  render/  precomp/  cache/        │  folder per task
+│                  input/ output/ workflow/              │
+└── comp/          nk/  render/  precomp/  cache/        ┘
+```
+
+**Naming:** `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version}`
+
+| token | example | | token | example |
+|---|---|---|---|---|
+| show | `shwx` | | task | `comp` |
+| part | `101` | | type | `WIP` |
+| seq | `010` | | artist | `rikinp` |
+| shot | `0010` | | version | `v03` |
+
+---
+
+## 🔄 Updating
 
 When the pipeline changes, get the latest in one click:
+
 - **Windows:** double-click **`update.bat`**
-- **mac:** double-click **`update.command`** (first time only, run `chmod +x update.command` so macOS lets you double-click it)
+- **mac:** double-click **`update.command`**
 
-It runs `git pull`, then **`sync`** (adds any new folders the update introduced into your
-existing shots, so you never delete and rebuild the show), and reminds you to **restart Nuke** so
-the new code loads. Never edit files inside this folder, that is what keeps updates one click
-forever (local edits cause pull conflicts).
+It runs `git pull`, then **`sync`** (adds any new folders into your existing shots — never deletes
+your work), then reminds you to restart Nuke.
 
-### Changing the folder structure for everyone
-Edit `pipeline.json`, push. When teammates update, `sync` adds the new folders to every existing
-shot automatically. Adds are always safe. To remove folders you dropped from the config, run it
-manually:
+> **Rule for the team:** never edit files inside the repo folder. That keeps updates one-click forever.
+
+<details>
+<summary>Changing the folder structure for everyone</summary>
+
+Edit `pipeline.json`, push. Teammates get the new folders automatically on their next update. To
+remove folders you dropped from the config:
 ```bash
 python pipeline_core.py sync --prune
 ```
-`--prune` only deletes folders that are **empty**; anything still holding files is kept and
-reported, never deleted.
+`--prune` only deletes folders that are **empty** — anything holding files is kept and reported.
+</details>
 
 ---
 
-## Daily use
+## 👥 Collaboration
 
-**Make a shot** (from the menu: CC VFX Menu > New Shot, or the CLI):
-```bash
-python pipeline_core.py new_shot 101 010 0010   # new_shot <PART> <SEQ> <SHOT>
-```
-
-**Save your Nuke script** with the correct name + version:
-- CC VFX Menu > **Pipeline Save Script > Comp** (or Prep / RotoPaint / AI)
-- Pick the shot from the dropdown, pick a **type** (WIP / CF / TF / SlapComp / ...).
-- Saves into that task's `nk/` folder, e.g.
-  `...\shwx\101\010\0010\comp\nk\shwx_101_010_0010_comp_WIP_rikinp_v01.nk`.
-- Run it again later to bump the version automatically.
-
-**Add render Write nodes:**
-- Select the node to output, then CC VFX Menu > **Pipeline Write (EXR + MOV)**.
-- No picking. It reads your **open script** and makes **two** Write nodes that mirror it exactly -
-  an EXR into `<task>/render/<stem>/exr/` and a MOV into `<task>/render/<stem>/mov/`. So a
-  `..._comp_WIP_..._v03.nk` script writes into
-  `...\comp\render\shwx_101_010_0010_comp_WIP_rikinp_v03\{exr,mov}\`. Press **Render** (F7).
-- (If the script isn't saved with a pipeline name yet, it just tells you to Pipeline Save Script
-  first - it never asks you to pick a shot.)
-
-### Going from WIP v08 to Creative Final v09
-Just Save Script again and pick type **CF**. The version auto-bumps to v09 (next after the highest
-existing). Type is a free label; the version always climbs per shot+task.
+Everyone points `root` at the **same mounted shared drive** (Dropbox / Google Drive / LucidLink) and
+sets their own `artist`. After that, the same shot resolves to the same folder and the same name on
+every machine.
 
 ---
 
-## Folder structure and naming
+## 🎨 Color (ACEScg)
 
-Full tree and every folder's purpose: see [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md).
+Standard is **4K / ACEScg / EXR**, and the menu sets it up for you: on launch it makes **OCIO + the
+ACES config** (`aces_1.3`) the default for new scripts, so the Write's `ACES - ACEScg` colorspace just
+works. If your Nuke uses a different ACES name, change `ocio_config` in `pipeline.json`.
 
-Hierarchy: `<root>/<show>/<part>/<seq>/<shot>/<task>/...` (scripts in `<task>/nk`, renders in
-`<task>/render/<stem>/{exr,mov}`; shared `plates/review/delivery/elements` at shot level).
-
-Name: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
-
-| token | meaning | example |
-|-------|---------|---------|
-| show | show code | `shwx` |
-| part | part / episode | `101` |
-| seq | sequence | `010` |
-| shot | shot | `0010` |
-| task | Prep / RotoPaint / AI / Comp | `comp` |
-| type | SlapComp / FirstPassSingle / FirstPassVideo / WIP / CF / TF | `WIP` |
-| artist | your name | `rikinp` |
-| version | 2-digit, per shot+task | `v01` |
+> The full ACEScg ↔ 8-bit AI color roundtrip (plates to AI tools and back) is on the roadmap, not done yet.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-- **`~/.cc_pipeline.json`** (per machine): your `root`, `show`, `artist`. Set by the installer or
-  the `config` command. Switch shows with `python pipeline_core.py config show <code>`. (The old
-  `~/.comfyx_local.json` is still read as a fallback.)
-- **`pipeline.json`** (shared, versioned): the folder sets (`show_structure`, `shot_common`,
-  `tasks`, `task_subfolders`, `task_extras`), the `types` list, and the colorspaces
-  (`write_colorspace`, `review_colorspace`). Edit here to change the structure for everyone.
-
-Environment overrides (optional): `CC_ROOT`, `CC_SHOW`, `CC_ARTIST` (legacy `COMFYX_*` still honored).
+- **`~/.cc_pipeline.json`** (per machine) — your `root`, `show`, `artist`. Set by the installer or
+  `config` command. *(The old `~/.comfyx_local.json` is still read as a fallback.)*
+- **`pipeline.json`** (shared, versioned) — the folder sets (`shot_common`, `tasks`,
+  `task_subfolders`, `task_extras`, `show_structure`), the `types` list, and the colorspaces.
+- Environment overrides: `CC_ROOT`, `CC_SHOW`, `CC_ARTIST` *(legacy `COMFYX_*` still honored)*.
 
 ---
 
-## Collaboration
+## 🩺 Troubleshooting
 
-Everyone sets `root` to the **same mounted shared drive**. Each person sets their own `artist`.
-After that, the same shot resolves to the same folder and the same name on every machine. A local
-`root` means a private copy, not shared work.
-
----
-
-## Color (ACEScg)
-
-The pipeline standard is 4K / ACEScg / EXR, and it sets this up for you: on launch the menu makes
-**OCIO + the ACES config the default color management** for new scripts (`color_management` and
-`ocio_config` in `pipeline.json`, default `OCIO` / `aces_1.3`). So File > New is already on ACES and
-the Write's `ACES - ACEScg` colorspace just works.
-
-If your Nuke build names its ACES config differently (e.g. `aces_1.2`), change `ocio_config` in
-`pipeline.json`. The Write still sets `ACES - ACEScg` only when that colorspace exists, so it never
-errors on a non-ACES build.
-
-> The full ACEScg <-> 8-bit AI color roundtrip (converting plates for AI tools and back) is the
-> known hard problem and is on the roadmap, not done yet.
+| Problem | Fix |
+|---|---|
+| **No CC VFX Menu** | Repo isn't on `NUKE_PATH`. Re-run the installer (or the manual `init.py` step) and restart Nuke. |
+| **`python` not found** | Install Python 3 and tick "Add to PATH", then re-run the installer. |
+| **Shot not in the dropdown** | Create it first (New Shot / `new_shot`). The list shows shots that exist on disk. |
+| **`invalid lut selected: ACES - ACEScg`** | Your Nuke isn't on an ACES config. Set `ocio_config` in `pipeline.json` to your build's name. |
 
 ---
 
-## Troubleshooting
-
-- **Menu not showing** - the repo is not on `NUKE_PATH`. Redo install step 2 and restart Nuke.
-- **`python` not found** - install Python 3 and tick "Add to PATH".
-- **`invalid lut selected: ACES - ACEScg`** - your Nuke is not on an ACES config. Already handled
-  (the Write skips it); see Color above to enable ACEScg.
-- **Shot not in the dropdown** - create it first (New Shot / `new_shot`). The dropdown lists shots
-  that exist on disk.
-
----
-
-## Development
+## 🛠️ Development
 
 Pure stdlib. Run the tests:
 ```bash
 python -m unittest -v
 ```
 
-Core modules:
-- `pipeline_core.py` - config, folder scaffolding, naming, versioning, shot listing.
-- `nuke_pipeline.py` - Nuke Save Script / Write + the pickers.
-- `menu.py` - Nuke menu registration (CC VFX Menu) + default OCIO color.
-- `install.py` - first-time interactive setup.
-- `pipeline.json` - the shared config. `test_pipeline_core.py` - tests.
+| File | Role |
+|---|---|
+| `pipeline_core.py` | config, folder scaffolding, naming, versioning, shot listing, `sync` |
+| `nuke_pipeline.py` | Nuke Save Script / Write + the pickers |
+| `menu.py` | CC VFX Menu registration + default OCIO color |
+| `install.py` | first-time interactive setup |
+| `pipeline.json` | the shared config · `test_pipeline_core.py` — tests |
 
-(`comfy_bridge.py` + `Workflows/` are a separate, dormant Nuke<->ComfyUI panel kept in the repo but
-not wired into the pipeline menus.)
+*(`comfy_bridge.py` + `Workflows/` are a separate, dormant Nuke↔ComfyUI panel kept in the repo but not wired into the pipeline menus.)*
 
 ---
 
-## Roadmap
+## 🗺️ Roadmap
 
-- ACES OCIO config shipped in-repo so ACEScg works out of the box.
-- AI color roundtrip (ACEScg plates to 8-bit for AI tools and back).
-- More tasks / types as the show needs them.
+- [ ] Ship an ACES OCIO config in-repo so ACEScg works with zero Nuke setup
+- [ ] AI color roundtrip (ACEScg plates → 8-bit for AI tools and back)
+- [ ] More tasks / types as the show needs them
