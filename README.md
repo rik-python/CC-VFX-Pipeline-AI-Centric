@@ -171,10 +171,14 @@ After that, the same shot resolves to the same folder and the same name on every
 
 ## Color (ACEScg)
 
-The pipeline standard is 4K / ACEScg / EXR. The Write node will set colorspace to
-`ACES - ACEScg` **only if your Nuke is on an ACES OCIO config**; otherwise it leaves Nuke's
-default and does not error. To get true ACEScg, set Nuke's OCIO config to `aces_1.3` (Project
-Settings > Color) or set the `OCIO` environment variable to an ACES `config.ocio`.
+The pipeline standard is 4K / ACEScg / EXR, and it sets this up for you: on launch the menu makes
+**OCIO + the ACES config the default color management** for new scripts (`color_management` and
+`ocio_config` in `pipeline.json`, default `OCIO` / `aces_1.3`). So File > New is already on ACES and
+the Write's `ACES - ACEScg` colorspace just works.
+
+If your Nuke build names its ACES config differently (e.g. `aces_1.2`), change `ocio_config` in
+`pipeline.json`. The Write still sets `ACES - ACEScg` only when that colorspace exists, so it never
+errors on a non-ACES build.
 
 > The full ACEScg <-> 8-bit AI color roundtrip (converting plates for AI tools and back) is the
 > known hard problem and is on the roadmap, not done yet.

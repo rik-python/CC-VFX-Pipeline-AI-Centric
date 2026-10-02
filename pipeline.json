@@ -9,6 +9,8 @@
   "format": "exr",
   "write_colorspace": "ACES - ACEScg",
   "review_colorspace": "",
+  "color_management": "OCIO",
+  "ocio_config": "aces_1.3",
   "mov_format": "mov",
   "naming": "{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}",
   "types": ["SlapComp", "FirstPassSingle", "FirstPassVideo", "WIP", "CF", "TF"],
