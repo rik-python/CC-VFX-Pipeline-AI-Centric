@@ -8,9 +8,14 @@
   "colorspace": "ACEScg",
   "format": "exr",
   "write_colorspace": "ACES - ACEScg",
+  "review_colorspace": "",
+  "mov_format": "mov",
   "naming": "{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}",
   "types": ["SlapComp", "FirstPassSingle", "FirstPassVideo", "WIP", "CF", "TF"],
-  "script_folder": "nuke",
+  "script_subfolder": "nk",
+  "render_folder": "render",
+  "render_exr_dir": "exr",
+  "render_mov_dir": "mov",
   "show_structure": [
     "assets", "reference", "edit", "incoming", "deliveries", "review",
     "color/luts", "color/cdl", "color/ocio",
@@ -22,22 +27,10 @@
     "ai/models/checkpoints", "ai/models/controlnet", "ai/models/vae", "ai/models/upscale",
     "ai/training/configs", "ai/training/runs"
   ],
-  "shot_structure": [
-    "plates", "nuke", "nuke/precomp", "rotopaint",
-    "track", "layout", "anim", "fx", "lighting", "render",
-    "ai_input", "ai_output", "comp",
-    "elements", "comfyui", "workflow",
-    "cache", "review", "delivery"
-  ],
-  "task_folders": {
-    "rotopaint": "rotopaint",
-    "track": "track",
-    "layout": "layout",
-    "anim": "anim",
-    "fx": "fx",
-    "lighting": "lighting",
-    "render": "render",
-    "ai": "ai_output",
-    "comp": "comp"
+  "shot_common": ["plates", "review", "delivery", "elements"],
+  "tasks": ["prep", "rotopaint", "ai", "comp"],
+  "task_subfolders": ["nk", "render", "precomp", "cache"],
+  "task_extras": {
+    "ai": ["input", "output", "workflow", "comfyui"]
   }
 }

@@ -4,7 +4,9 @@ Stdlib only (runs inside Nuke's embedded Python). Both the Nuke panel and the
 ComfyUI save side import this so every freelancer resolves identical paths and
 names. Pure functions take a cfg dict; load_config() is the convenience loader.
 
-Hierarchy:  <root>/<show>/<part>/<seq>/<shot>/<task folder>
+Hierarchy:  <root>/<show>/<part>/<seq>/<shot>/<task>/{nk,render,precomp,cache,...}
+            Common shot folders (plates/review/delivery/elements) sit at shot level.
+            Scripts: <shot>/<task>/nk ; renders: <shot>/<task>/render/<stem>/{exr,mov}.
 Naming:     {show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}
             -> shwx_101_010_0010_ai_FirstPass_rikinp_v01
 Version is per shot+task (shared across types); the script version drives the
@@ -78,22 +80,31 @@ def ensure_show(cfg):
 
 
 def ensure_shot(cfg, part, seq, shot):
-    """Create a shot's folder tree (part/seq auto-created). Returns shot dir. Idempotent."""
+    """Create a shot's task-centric tree (part/seq auto-created). Returns shot dir. Idempotent.
+
+    Shot level gets the common folders (shot_common: plates/review/delivery/elements).
+    Each task in `tasks` gets its own folder holding task_subfolders (nk/render/precomp/
+    cache) plus any task_extras (e.g. ai: input/output/workflow/comfyui).
+    """
     base = shot_base(cfg, part, seq, shot)
-    for sub in cfg.get("shot_structure", []):
+    for sub in cfg.get("shot_common", []):
         os.makedirs(os.path.join(base, sub), exist_ok=True)
+    subs = cfg.get("task_subfolders", [])
+    extras = cfg.get("task_extras", {})
+    for task in cfg.get("tasks", []):
+        for sub in subs + extras.get(task, []):
+            os.makedirs(os.path.join(base, task, sub), exist_ok=True)
     return _fwd(base)
 
 
-def task_dir(cfg, part, seq, shot, task):
-    """Folder a task writes into. Unknown task -> folder named after it."""
-    folder = cfg.get("task_folders", {}).get(task, task)
-    return _fwd(os.path.join(shot_base(cfg, part, seq, shot), folder))
+def task_root(cfg, part, seq, shot, task):
+    """The task's own folder: <shot>/<task> (holds nk/ render/ precomp/ cache/ ...)."""
+    return _fwd(os.path.join(shot_base(cfg, part, seq, shot), task))
 
 
-def script_dir(cfg, part, seq, shot):
-    """Where .nk scripts live: the shot's nuke folder."""
-    return _fwd(os.path.join(shot_base(cfg, part, seq, shot), cfg.get("script_folder", "nuke")))
+def script_dir(cfg, part, seq, shot, task):
+    """Where a task's .nk scripts live: <shot>/<task>/<script_subfolder> (default nk)."""
+    return _fwd(os.path.join(shot_base(cfg, part, seq, shot), task, cfg.get("script_subfolder", "nk")))
 
 
 # --- naming + versioning ----------------------------------------------------
@@ -147,14 +158,13 @@ def _scan_version(folder, rex):
     return highest + 1
 
 
-def next_version(cfg, part, seq, shot, task):
-    """Next render version for a shot+task (scans the task folder, any type)."""
-    return _scan_version(task_dir(cfg, part, seq, shot, task), _version_regex(cfg, part, seq, shot, task))
-
-
 def next_script_version(cfg, part, seq, shot, task):
-    """Next .nk version for a shot+task (scans the nuke folder, any type)."""
-    return _scan_version(script_dir(cfg, part, seq, shot), _version_regex(cfg, part, seq, shot, task))
+    """Next .nk version for a shot+task (scans the task's nk folder, any type).
+
+    Version is per shot+task and driven by the script; renders inherit the script's
+    version, so this is the single source of truth for the counter.
+    """
+    return _scan_version(script_dir(cfg, part, seq, shot, task), _version_regex(cfg, part, seq, shot, task))
 
 
 def make_filename(cfg, part, seq, shot, task, type_, version, ext=None, frame_pad=None):
@@ -165,45 +175,73 @@ def make_filename(cfg, part, seq, shot, task, type_, version, ext=None, frame_pa
     return "{0}.{1}".format(stem, ext)
 
 
-def output_path(cfg, part, seq, shot, task, type_, ext=None, frame_pad=None,
-                version=None, make_dirs=False):
-    """Full render path. version=None auto-picks next for the shot+task. Forward-slashed."""
-    if version is None:
-        version = next_version(cfg, part, seq, shot, task)
-    folder = task_dir(cfg, part, seq, shot, task)
-    if make_dirs:
-        os.makedirs(folder, exist_ok=True)
-    return _fwd(os.path.join(folder, make_filename(cfg, part, seq, shot, task, type_, version, ext, frame_pad)))
+def _render_stem_dir(cfg, part, seq, shot, task, stem):
+    """<shot>/<task>/<render_folder>/<stem> - the per-render folder that holds exr/ + mov/."""
+    return os.path.join(shot_base(cfg, part, seq, shot), task, cfg.get("render_folder", "render"), stem)
 
 
-def write_path_from_script(cfg, script_path, ext=None, frame_pad="%04d", make_dirs=False):
-    """Render path that mirrors an open .nk script: same name, the task's render folder, image ext.
+def render_outputs(cfg, script_path, frame_pad="%04d", make_dirs=False):
+    """Render paths that mirror an open .nk script, split into exr/ and mov/.
 
-    task/type/version/stem come from the script's filename; part/seq/shot from its
-    location (falling back to the filename's tokens). So a `..._comp_WIP_..._v03.nk`
-    script yields `.../comp/..._comp_WIP_..._v03.%04d.exr` - zero re-picking, version
-    locked to the script. Returns None if the script is not pipeline-named (the caller
-    should then fall back to asking). Forward-slashed.
+    From a `..._comp_WIP_..._v03.nk` script this yields, under the task's render folder:
+      <shot>/comp/render/<stem>/exr/<stem>.%04d.exr   (frames)
+      <shot>/comp/render/<stem>/mov/<stem>.mov         (review movie)
+    task/stem come from the script filename; part/seq/shot from its location (falling
+    back to the filename tokens). Returns a dict of forward-slashed paths, or None if
+    the script is not pipeline-named.
     """
     info = parse_name(script_path)
     if not info:
         return None
     ctx = context_from_path(cfg, script_path)
     part, seq, shot = ctx if ctx else (info["part"], info["seq"], info["shot"])
-    folder = task_dir(cfg, part, seq, shot, info["task"])
-    if make_dirs:
-        os.makedirs(folder, exist_ok=True)
-    ext = (ext or cfg.get("format", "exr")).lstrip(".")
     stem = os.path.basename(script_path).split(".")[0]
+    rdir = _render_stem_dir(cfg, part, seq, shot, info["task"], stem)
+    exr_dir = os.path.join(rdir, cfg.get("render_exr_dir", "exr"))
+    mov_dir = os.path.join(rdir, cfg.get("render_mov_dir", "mov"))
+    if make_dirs:
+        os.makedirs(exr_dir, exist_ok=True)
+        os.makedirs(mov_dir, exist_ok=True)
+    img_ext = cfg.get("format", "exr").lstrip(".")
+    mov_ext = cfg.get("mov_format", "mov").lstrip(".")
+    exr_name = "{0}.{1}.{2}".format(stem, frame_pad, img_ext) if frame_pad else "{0}.{1}".format(stem, img_ext)
+    return {
+        "dir": _fwd(rdir),
+        "exr_dir": _fwd(exr_dir),
+        "mov_dir": _fwd(mov_dir),
+        "exr": _fwd(os.path.join(exr_dir, exr_name)),
+        "mov": _fwd(os.path.join(mov_dir, "{0}.{1}".format(stem, mov_ext))),
+    }
+
+
+def write_path_from_script(cfg, script_path, frame_pad="%04d", make_dirs=False):
+    """Convenience: just the EXR render path for an open script (see render_outputs)."""
+    r = render_outputs(cfg, script_path, frame_pad=frame_pad, make_dirs=make_dirs)
+    return r["exr"] if r else None
+
+
+def output_path(cfg, part, seq, shot, task, type_, ext=None, frame_pad="%04d",
+                version=None, make_dirs=False):
+    """Render EXR path for a task+type (CLI aid): <shot>/<task>/render/<stem>/exr/<stem>.%04d.ext.
+
+    version=None auto-picks the next version for the shot+task. Forward-slashed.
+    """
+    if version is None:
+        version = next_script_version(cfg, part, seq, shot, task)
+    stem = _stem(cfg, part, seq, shot, task, type_, version)
+    rdir = os.path.join(_render_stem_dir(cfg, part, seq, shot, task, stem), cfg.get("render_exr_dir", "exr"))
+    if make_dirs:
+        os.makedirs(rdir, exist_ok=True)
+    ext = (ext or cfg.get("format", "exr")).lstrip(".")
     name = "{0}.{1}.{2}".format(stem, frame_pad, ext) if frame_pad else "{0}.{1}".format(stem, ext)
-    return _fwd(os.path.join(folder, name))
+    return _fwd(os.path.join(rdir, name))
 
 
 def script_path(cfg, part, seq, shot, task, type_, version=None, make_dirs=False):
-    """Full .nk path with the enforced name. version=None auto-picks next. Forward-slashed."""
+    """Full .nk path with the enforced name, in the task's nk folder. version=None auto-picks next."""
     if version is None:
         version = next_script_version(cfg, part, seq, shot, task)
-    folder = script_dir(cfg, part, seq, shot)
+    folder = script_dir(cfg, part, seq, shot, task)
     if make_dirs:
         os.makedirs(folder, exist_ok=True)
     return _fwd(os.path.join(folder, _stem(cfg, part, seq, shot, task, type_, version) + ".nk"))
@@ -245,14 +283,14 @@ def list_shots(cfg, show=None):
 def sync_structure(cfg, prune=False):
     """Reconcile the existing show + every existing shot against the current config.
 
-    Add-only by default (safe): creates any folder in show_structure / shot_structure
-    that a shot is missing, so a config change (new task/folder) propagates to shots
-    that already exist - no deleting and rebuilding the show.
+    Add-only by default (safe): creates any show-level, common, or per-task folder a
+    shot is missing, so a config change (new task/subfolder) propagates to shots that
+    already exist - no deleting and rebuilding the show.
 
-    prune=True also removes shot folders no longer in the config, but ONLY when they
-    are empty; a folder that still holds files is kept and reported, never deleted.
-    Prune compares the shot's direct children against the top level of shot_structure
-    (so a parent like `nuke` is kept even though its `nuke/precomp` child is nested).
+    prune=True also removes shot-level folders no longer in the config, but ONLY when
+    they are empty; a folder that still holds anything is kept and reported, never
+    deleted. Prune only looks at the shot's direct children (expected = shot_common +
+    tasks); it does not descend into task folders.
 
     Returns {"shots": N, "added": [...], "removed": [...], "kept_nonempty": [...]}.
     """
@@ -268,22 +306,32 @@ def sync_structure(cfg, prune=False):
 
     shots = list_shots(cfg)
     report["shots"] = len(shots)
-    keep_top = {s.split("/")[0] for s in cfg.get("shot_structure", [])}
-    keep_top.add(cfg.get("script_folder", "nuke"))
+    common = cfg.get("shot_common", [])
+    tasks = cfg.get("tasks", [])
+    subs = cfg.get("task_subfolders", [])
+    extras = cfg.get("task_extras", {})
+    expected_top = set(common) | set(tasks)
 
     for part, seq, shot in shots:
         sbase = shot_base(cfg, part, seq, shot)
-        # add missing
-        for sub in cfg.get("shot_structure", []):
+        # add common (shot level)
+        for sub in common:
             d = os.path.join(sbase, sub)
             if not os.path.isdir(d):
                 os.makedirs(d, exist_ok=True)
                 report["added"].append(_fwd(d))
-        # prune (empty-only) folders dropped from config
+        # add each task's subfolders (+ extras)
+        for task in tasks:
+            for sub in subs + extras.get(task, []):
+                d = os.path.join(sbase, task, sub)
+                if not os.path.isdir(d):
+                    os.makedirs(d, exist_ok=True)
+                    report["added"].append(_fwd(d))
+        # prune (empty-only) shot-level folders dropped from config
         if prune and os.path.isdir(sbase):
             for name in sorted(os.listdir(sbase)):
                 d = os.path.join(sbase, name)
-                if not os.path.isdir(d) or name in keep_top:
+                if not os.path.isdir(d) or name in expected_top:
                     continue
                 if os.listdir(d):
                     report["kept_nonempty"].append(_fwd(d))

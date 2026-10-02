@@ -9,7 +9,7 @@ comfy_menu = toolbar.addMenu("Comfy Compositor", icon="CC.png")
 comfy_menu.addCommand("Open Panel", "import comfy_bridge; comfy_bridge.show_panel()")
 
 # (label shown in menu, task token used in filenames/folders)
-_TASKS = (("RotoPaint", "rotopaint"), ("AI", "ai"), ("Comp", "comp"))
+_TASKS = (("Prep", "prep"), ("RotoPaint", "rotopaint"), ("AI", "ai"), ("Comp", "comp"))
 
 # Scaffold a new shot's folders (no terminal).
 comfy_menu.addCommand("New Shot", "import nuke_pipeline; nuke_pipeline.new_shot_dialog()")
@@ -25,6 +25,6 @@ for _label, _task in _TASKS:
 # Pipeline-aware Write node. Auto-derives task/type/version/shot from the OPEN
 # script, so the render mirrors the .nk exactly. One button, no picking.
 comfy_menu.addCommand(
-    "Pipeline Write (from script)",
+    "Pipeline Write (EXR + MOV)",
     "import nuke_pipeline; nuke_pipeline.create_write()",
 )

@@ -172,14 +172,31 @@ def save_script(task="comp"):
     return path
 
 
-def create_write(task="comp", ext="exr"):
-    """Create a pipeline-correct Write node wired to the selected node.
+def _set(node, knob, value):
+    """Set a knob if it exists and accepts the value; silently skip otherwise."""
+    try:
+        node[knob].setValue(value)
+    except Exception:
+        pass
 
-    Auto-derives everything from the OPEN SCRIPT: task, type, version and shot all
-    mirror the saved .nk, so the render name matches the script exactly (a
-    ..._comp_WIP_..._v03.nk script writes ..._comp_WIP_..._v03.%04d.exr into the comp
-    folder). No re-picking, no shot dialog. If the script isn't saved with a pipeline
-    name yet, it tells the artist to Pipeline Save Script first and does nothing.
+
+def _set_colorspace(node, cs):
+    """Set the colorspace knob only if that value exists in this Nuke's config."""
+    try:
+        k = node["colorspace"]
+        if cs and hasattr(k, "values") and cs in k.values():
+            k.setValue(cs)
+    except Exception:
+        pass
+
+
+def create_write():
+    """Create pipeline-correct Write nodes from the OPEN SCRIPT: one EXR + one MOV.
+
+    task/type/version/shot all come from the saved .nk name, so the renders mirror the
+    script exactly into <task>/render/<stem>/exr (frames) and /mov (review movie). No
+    re-picking, no shot dialog. If the script isn't saved with a pipeline name yet, it
+    tells the artist to Pipeline Save Script first and does nothing.
     """
     cfg = pc.load_config()
     script = nuke.root().name()
@@ -190,35 +207,36 @@ def create_write(task="comp", ext="exr"):
             "Run Comfy Compositor > Pipeline Save Script first, then add the Write.\n"
             "(current script: {0})".format(script or "unsaved"))
         return None
-    task = info["task"]
-    ext = cfg.get("format", "exr")
-    path = pc.write_path_from_script(cfg, script, ext=ext, frame_pad="%04d", make_dirs=True)
 
+    r = pc.render_outputs(cfg, script, frame_pad="%04d", make_dirs=True)
+    task = info["task"]
     sel = nuke.selectedNodes()
-    w = nuke.nodes.Write(file=path, name="Write_{0}_1".format(task))
-    try:
-        w["file_type"].setValue(ext)
-    except Exception:
-        pass
-    try:
-        w["create_directories"].setValue(True)
-    except Exception:
-        pass
-    if ext == "exr":
-        for knob, val in (("datatype", "16 bit half"), ("compression", "Zip (1 scanline)")):
+    src = sel[0] if sel else None
+
+    # EXR: frames, working colorspace (ACEScg if the config has it)
+    exr = nuke.nodes.Write(file=r["exr"], name="Write_{0}_exr".format(task))
+    _set(exr, "file_type", "exr")
+    _set(exr, "create_directories", True)
+    _set(exr, "datatype", "16 bit half")
+    _set(exr, "compression", "Zip (1 scanline)")
+    _set_colorspace(exr, cfg.get("write_colorspace", ""))
+
+    # MOV: review movie, review colorspace. Codec knob names vary by Nuke version; each
+    # _set is a no-op when the knob/value is not present.
+    mov = nuke.nodes.Write(file=r["mov"], name="Write_{0}_mov".format(task))
+    _set(mov, "file_type", "mov")
+    _set(mov, "create_directories", True)
+    for knob, val in (("mov64_codec", "h264"), ("codec", "h264"), ("meta_codec", "h264")):
+        _set(mov, knob, val)
+    _set_colorspace(mov, cfg.get("review_colorspace", ""))
+
+    for i, w in enumerate((exr, mov)):
+        if src is not None:
+            w.setInput(0, src)
             try:
-                w[knob].setValue(val)
+                w.setXYpos(src.xpos() + i * 100, src.ypos() + 120)
             except Exception:
                 pass
-        # Only set colorspace if that value exists in this Nuke's config (ACES OCIO or not).
-        cs = cfg.get("write_colorspace", "")
-        try:
-            k = w["colorspace"]
-            if cs and hasattr(k, "values") and cs in k.values():
-                k.setValue(cs)
-        except Exception:
-            pass
-    if sel:
-        w.setInput(0, sel[0])
-    nuke.message("ComfyXNuke Write set:\n{0}".format(path))
-    return w
+
+    nuke.message("ComfyXNuke Write nodes set:\nEXR: {0}\nMOV: {1}".format(r["exr"], r["mov"]))
+    return exr, mov

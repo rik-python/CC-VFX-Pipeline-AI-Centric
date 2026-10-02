@@ -1,11 +1,16 @@
 # CC Pipeline (AI Centric) - Folder Structure (Template)
 
-Canonical layout. Hierarchy: `<root>/<show>/<part>/<seq>/<shot>/<task folders>`.
+Canonical layout for an all-Nuke team. Hierarchy:
+`<root>/<show>/<part>/<seq>/<shot>/<task>/...`
 `root` = your work drive (holds many shows), `show` = show code. Folders are created by the
 scaffolder, never by hand.
 
+The shot is **task-centric**: shared inputs/outputs live at shot level, and each task
+(prep / rotopaint / ai / comp) owns a self-contained folder with its scripts, renders, precomp and
+cache.
+
 Naming: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
-e.g. `shwx_101_010_0010_ai_FirstPass_rikinp_v01.exr`
+e.g. `shwx_101_010_0010_comp_WIP_rikinp_v03`
 
 | token | meaning | example |
 |-------|---------|---------|
@@ -13,10 +18,10 @@ e.g. `shwx_101_010_0010_ai_FirstPass_rikinp_v01.exr`
 | part  | part / episode | `101` |
 | seq   | sequence | `010` |
 | shot  | shot | `0010` |
-| task  | rotopaint / track / layout / anim / fx / lighting / render / ai / comp | `ai` |
-| type  | SlapComp / FirstPassSingle / FirstPassVideo / WIP / CF / TF | `FirstPass` |
+| task  | prep / rotopaint / ai / comp | `comp` |
+| type  | SlapComp / FirstPassSingle / FirstPassVideo / WIP / CF / TF | `WIP` |
 | artist| your name | `rikinp` |
-| version | 2-digit, per shot+task | `v01` |
+| version | 2-digit, per shot+task | `v03` |
 
 ## Setup
 
@@ -27,27 +32,23 @@ python pipeline_core.py config show shwx               # show code
 python pipeline_core.py config artist rikinp           # your artist name
 ```
 
-Let Nuke find the tools (adds this repo to Nuke). Put this line in `~/.nuke/init.py`:
+Let Nuke find the tools. Put this line in `~/.nuke/init.py`:
 ```
 nuke.pluginAddPath(r"<path to this repo>")
 ```
 
-Verify setup:
+Verify / build:
 ```bash
 python pipeline_core.py doctor
-```
-
-Build folders:
-```bash
 python pipeline_core.py init_show                 # show-level folders, once
 python pipeline_core.py new_shot 101 010 0010     # a shot: new_shot <PART> <SEQ> <SHOT>
-python pipeline_core.py sync                       # after a config change: add new folders to all existing shots
-python pipeline_core.py sync --prune               # also remove dropped folders (empty only, never deletes data)
+python pipeline_core.py sync                       # after a config change: add new folders everywhere
+python pipeline_core.py sync --prune               # also remove dropped folders (empty only, never data)
 ```
 
 Settings live in `~/.comfyx_local.json` (env `COMFYX_ROOT` / `COMFYX_SHOW` / `COMFYX_ARTIST`
-override). Folder sets are defined in `pipeline.json` (`show_structure` + `shot_structure`),
-type list in `types`.
+override). Folder sets live in `pipeline.json` (`shot_common`, `tasks`, `task_subfolders`,
+`task_extras`, `show_structure`), type list in `types`.
 
 ## Tree
 
@@ -60,48 +61,48 @@ type list in `types`.
     incoming/                           raw client drops before sorting into shots
     deliveries/                         packaged final sends back to client
     review/                             dailies / proxies staged for Frame.io
-    color/
-      luts/   cdl/   ocio/              show color management (ACES OCIO)
+    color/   luts/ cdl/ ocio/           show color management (ACES OCIO)
     ai/
-      datasets/
-        images/   { raw/  processed/ }
-        videos/   { raw/  processed/ }
-        audio/    { raw/  processed/ }
-        captions/                       labels / tags for training sets
-      prompts/                          reusable prompt library
-      loras/                            trained + downloaded LoRAs
-      models/   { checkpoints/  controlnet/  vae/  upscale/ }
-      training/ { configs/  runs/ }
+      datasets/ images/ videos/ audio/  { raw/  processed/ }  + captions/
+      prompts/  loras/
+      models/   checkpoints/ controlnet/ vae/ upscale/
+      training/ configs/ runs/
     <part>/                             part / episode, e.g. 101
       <seq>/                            sequence, e.g. 010
         <shot>/                         shot, e.g. 0010
+          # --- common, shared across tasks ---
           plates/                       localized client source EXR (ACEScg)
-          nuke/                         .nk work scripts (Nuke tasks)
-            precomp/                    precomp .nk / renders (working subfolder, not a task)
-          rotopaint/                    roto mattes + paint cleanup               [task: RotoPaint, Nuke]
-          track/                        matchmove / camera solve                  [task: track, 3DE/Nuke]
-          layout/                       layout / blocking                         [task: layout, 3D]
-          anim/                         animation                                 [task: anim, 3D]
-          fx/                           FX / sims                                 [task: fx, Houdini]
-          lighting/                     CG lighting setups                        [task: lighting, 3D]
-          render/                       CG renders coming in (beauty / AOVs)      [task: render, 3D out]
-          ai_input/                     frames exported from Nuke to feed AI
-          ai_output/                    AI results back (ComfyUI / Kling / Runway)   [task: AI]
-          comp/                         final Nuke comp renders                   [task: Comp, Nuke]
-          elements/                     CG / stock / matte elements
-          comfyui/                      ComfyUI working files
-          workflow/                     workflow.json used (reproducibility)
-          cache/                        Nuke scratch
-          review/                       shot proxy / mov for client review
-          delivery/                     final EXR going back to client
+          review/                       shot proxy / mov staged for client review
+          delivery/                     final files going back to client
+          elements/                     CG / stock / matte elements shared by tasks
+          # --- one self-contained folder per task (prep / rotopaint / ai / comp) ---
+          <task>/
+            nk/                         the task's .nk scripts
+            render/                     renders, one subfolder per render (see below)
+            precomp/                    precomp working files
+            cache/                      Nuke scratch
+          ai/                           the AI task also gets:
+            input/                      frames exported from Nuke to feed AI
+            output/                     AI results back (ComfyUI / Kling / Runway)
+            workflow/                   the workflow.json actually used (reproducibility)
+            comfyui/                    ComfyUI working files
 ```
 
+### Renders (created at Write time)
+Each render gets its own subfolder named exactly like the script, with `exr/` + `mov/` inside:
+```
+<shot>/<task>/render/
+  shwx_101_010_0010_comp_WIP_rikinp_v03/
+    exr/   shwx_101_010_0010_comp_WIP_rikinp_v03.%04d.exr
+    mov/   shwx_101_010_0010_comp_WIP_rikinp_v03.mov
+```
+Pipeline Write makes both nodes from the open script (EXR into `exr/`, MOV into `mov/`).
+
 ## Rules
-- Everything under `ai/` and the show-level folders are show-shared. Do not duplicate per shot.
-- A part holds sequences; a sequence holds shots.
-- Version is per shot+task (shared across types). The Nuke script version drives the render
-  version, so a `comp_v03` script produces `comp_v03` renders.
+- Scripts live in `<task>/nk/`; renders in `<task>/render/<stem>/{exr,mov}`.
+- Version is per shot+task (shared across types), driven by the script version in `<task>/nk/`.
+  A `comp_v03` script renders `comp_v03`.
+- `plates / review / delivery / elements` are shot-level and shared; everything else is per task.
+- Everything under `ai/` (show level) and the other show-level folders are show-shared. Do not
+  duplicate per shot.
 - `raw` = as-received, never edit in place. `processed` = your treated result.
-- The 3D discipline tasks (track / layout / anim / fx / lighting / render) get their folders +
-  enforced names from the engine/CLI; the Nuke **Save Script / Write** buttons only cover the
-  Nuke tasks (RotoPaint / AI / Comp). `precomp` is a working subfolder inside `nuke/`, not a task.

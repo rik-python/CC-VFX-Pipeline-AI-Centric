@@ -22,8 +22,10 @@ Designed so a non-technical artist can clone it and be running in about 5 minute
 - Enforced naming: `shwx_101_010_0010_comp_WIP_rikinp_v01` (`show_part_seq_shot_task_type_artist_version`).
 - Auto-versioning per shot+task. The Nuke **script** version drives the **render** version, so a
   `comp_v03` script always produces `comp_v03` renders.
-- Nuke menu with **New Shot**, **Pipeline Save Script**, and **Pipeline Write**, per task
-  (RotoPaint / AI / Comp), with **dropdown pickers** for show/part/seq/shot and type (no typing).
+- Task-centric shots: shared folders (plates/review/delivery/elements) at shot level, and one
+  self-contained folder per task (**Prep / RotoPaint / AI / Comp**) holding its nk/render/precomp/cache.
+- Nuke menu with **New Shot**, **Pipeline Save Script** (per task), and **Pipeline Write (EXR + MOV)**,
+  with dropdown pickers for show/part/seq/shot and type on save (no typing).
 - Everyone who points at the same shared drive sees the same shots and names.
 
 ---
@@ -101,16 +103,18 @@ python pipeline_core.py new_shot 101 010 0010   # new_shot <PART> <SEQ> <SHOT>
 ```
 
 **Save your Nuke script** with the correct name + version:
-- Comfy Compositor > **Pipeline Save Script > Comp** (or RotoPaint / AI)
+- Comfy Compositor > **Pipeline Save Script > Comp** (or Prep / RotoPaint / AI)
 - Pick the shot from the dropdown, pick a **type** (WIP / CF / TF / SlapComp / ...).
-- Saves e.g. `...\shwx\101\010\0010\nuke\shwx_101_010_0010_comp_WIP_rikinp_v01.nk`.
+- Saves into that task's `nk/` folder, e.g.
+  `...\shwx\101\010\0010\comp\nk\shwx_101_010_0010_comp_WIP_rikinp_v01.nk`.
 - Run it again later to bump the version automatically.
 
-**Add a render Write node:**
-- Select the node to output, then Comfy Compositor > **Pipeline Write (from script)**.
-- No picking. The Write mirrors your **open script** exactly - same task, type, version and shot -
-  so a `..._comp_WIP_..._v03.nk` script writes `..._comp_WIP_..._v03.%04d.exr` into the `comp`
-  folder. Press **Render** (F7).
+**Add render Write nodes:**
+- Select the node to output, then Comfy Compositor > **Pipeline Write (EXR + MOV)**.
+- No picking. It reads your **open script** and makes **two** Write nodes that mirror it exactly -
+  an EXR into `<task>/render/<stem>/exr/` and a MOV into `<task>/render/<stem>/mov/`. So a
+  `..._comp_WIP_..._v03.nk` script writes into
+  `...\comp\render\shwx_101_010_0010_comp_WIP_rikinp_v03\{exr,mov}\`. Press **Render** (F7).
 - (If the script isn't saved with a pipeline name yet, it just tells you to Pipeline Save Script
   first - it never asks you to pick a shot.)
 
@@ -127,7 +131,8 @@ existing). Type is a free label; the version always climbs per shot+task.
 
 Full tree and every folder's purpose: see [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md).
 
-Hierarchy: `<root>/<show>/<part>/<seq>/<shot>/<task folders>`
+Hierarchy: `<root>/<show>/<part>/<seq>/<shot>/<task>/...` (scripts in `<task>/nk`, renders in
+`<task>/render/<stem>/{exr,mov}`; shared `plates/review/delivery/elements` at shot level).
 
 Name: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
 
@@ -137,7 +142,7 @@ Name: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
 | part | part / episode | `101` |
 | seq | sequence | `010` |
 | shot | shot | `0010` |
-| task | RotoPaint / AI / Comp | `comp` |
+| task | Prep / RotoPaint / AI / Comp | `comp` |
 | type | SlapComp / FirstPassSingle / FirstPassVideo / WIP / CF / TF | `WIP` |
 | artist | your name | `rikinp` |
 | version | 2-digit, per shot+task | `v01` |
@@ -148,9 +153,9 @@ Name: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
 
 - **`~/.comfyx_local.json`** (per machine): your `root`, `show`, `artist`. Set via the `config`
   command. Switch shows with `python pipeline_core.py config show <code>`.
-- **`pipeline.json`** (shared, versioned): the folder sets (`show_structure`, `shot_structure`),
-  `task_folders`, the `types` list, and `write_colorspace`. Edit here to change the structure for
-  everyone.
+- **`pipeline.json`** (shared, versioned): the folder sets (`show_structure`, `shot_common`,
+  `tasks`, `task_subfolders`, `task_extras`), the `types` list, and the colorspaces
+  (`write_colorspace`, `review_colorspace`). Edit here to change the structure for everyone.
 
 Environment overrides (optional): `COMFYX_ROOT`, `COMFYX_SHOW`, `COMFYX_ARTIST`.
 
