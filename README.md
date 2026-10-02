@@ -49,26 +49,34 @@ No pip installs. The pipeline code is pure standard library.
 git clone https://github.com/rik-python/CC-VFX-Pipeline-AI-Centric.git
 ```
 
-**2. Tell Nuke where it is.** Add this line to `~/.nuke/init.py` (create the file if it does not
-exist), using the path where you cloned it:
+**2. Run the installer.** Double-click **`install.bat`** (Windows) or **`install.command`** (mac;
+first time run `chmod +x install.command` once). It asks for:
+- your **artist / user name** (the name stamped into filenames),
+- the **shared-drive folder** that holds all shows, and the **show code**,
+- your **Nuke folder** (default `~/.nuke`).
+
+Then it saves your settings, wires Nuke (adds `pluginAddPath` to `init.py`), checks dependencies
+(Python, git, the shared drive, ComfyUI), offers to create the show folders, and runs the doctor.
+Re-running it is safe.
+
+**3. Restart Nuke.** You'll see **CC VFX Menu** and **CC AI Menu** in the top menu bar.
+
+<details>
+<summary>Manual setup (if you'd rather not use the installer)</summary>
+
+Add this line to `~/.nuke/init.py`, using your clone path:
 ```python
 nuke.pluginAddPath(r"C:\path\to\CC-VFX-Pipeline-AI-Centric")
 ```
-
-**3. Set your config (once per machine).** In the repo folder:
+Then, in the repo folder:
 ```bash
 python pipeline_core.py config root D:/Work/projects   # the folder that holds all your shows
 python pipeline_core.py config show shwx               # current show code
 python pipeline_core.py config artist rikinp           # your artist name
+python pipeline_core.py doctor                         # check it
 ```
-
-**4. Check it:**
-```bash
-python pipeline_core.py doctor
-```
-All `[OK]` means you are good. `[WARN] OCIO` is expected unless you use ACES (see Color below).
-
-**5. Restart Nuke.** Open **Nodes > [CC] Comfy Compositor**.
+Restart Nuke.
+</details>
 
 ---
 
