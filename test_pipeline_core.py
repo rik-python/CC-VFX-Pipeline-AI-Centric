@@ -17,12 +17,15 @@ def _cfg(root):
         "naming": "{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}",
         "types": ["SlapComp", "FirstPassSingle", "WIP", "CF", "TF"],
         "script_folder": "nuke",
-        "task_folders": {"rotopaint": "rotopaint", "ai": "ai_output", "comp": "comp"},
+        "task_folders": {"rotopaint": "rotopaint", "track": "track", "layout": "layout",
+                         "anim": "anim", "fx": "fx", "lighting": "lighting",
+                         "render": "render", "ai": "ai_output", "comp": "comp"},
         "show_structure": ["assets", "reference", "edit", "ai/datasets/images/raw",
                            "ai/models/checkpoints", "color/ocio"],
-        "shot_structure": ["plates", "nuke", "ai_input", "ai_output", "rotopaint",
-                           "comp", "elements", "comfyui", "workflow", "cache",
-                           "review", "delivery"],
+        "shot_structure": ["plates", "nuke", "nuke/precomp", "rotopaint",
+                           "track", "layout", "anim", "fx", "lighting", "render",
+                           "ai_input", "ai_output", "comp", "elements", "comfyui",
+                           "workflow", "cache", "review", "delivery"],
     }
 
 
@@ -77,6 +80,20 @@ class PipelineCore(unittest.TestCase):
         self.assertEqual(os.path.basename(pc.task_dir(self.cfg, self.P, self.S, self.H, "ai")), "ai_output")
         # unknown task falls back to a folder named after the task
         self.assertEqual(os.path.basename(pc.task_dir(self.cfg, self.P, self.S, self.H, "weird")), "weird")
+
+    def test_cg_tasks_map_to_own_folders(self):
+        for task in ("track", "layout", "anim", "fx", "lighting", "render"):
+            self.assertEqual(os.path.basename(pc.task_dir(self.cfg, self.P, self.S, self.H, task)), task)
+
+    def test_precomp_is_nested_under_nuke(self):
+        pc.ensure_shot(self.cfg, self.P, self.S, self.H)
+        self.assertTrue(os.path.isdir(os.path.join(self.sroot, self.P, self.S, self.H, "nuke", "precomp")))
+
+    def test_real_pipeline_json_has_cg_set_and_precomp(self):
+        cfg = pc.load_config()  # the shipped pipeline.json next to the module
+        for task in ("track", "layout", "anim", "fx", "lighting", "render"):
+            self.assertIn(task, cfg["task_folders"])
+        self.assertIn("nuke/precomp", cfg["shot_structure"])
 
     def test_paths_are_forward_slashed(self):
         self.assertNotIn("\\", pc.task_dir(self.cfg, self.P, self.S, self.H, "comp"))
@@ -151,6 +168,54 @@ class PipelineCore(unittest.TestCase):
         cfg2["show"] = "other"
         pc.ensure_shot(cfg2, "900", "090", "0900")
         self.assertEqual(pc.list_shots(self.cfg, show="other"), [("900", "090", "0900")])
+
+    # --- sync / migrate existing shots to a changed config ---
+    def test_sync_adds_new_folders_to_existing_shots(self):
+        # build a shot with an OLD (smaller) structure
+        old = dict(self.cfg)
+        old["shot_structure"] = ["plates", "nuke", "comp"]
+        pc.ensure_shot(old, self.P, self.S, self.H)
+        shot = os.path.join(self.sroot, self.P, self.S, self.H)
+        self.assertFalse(os.path.isdir(os.path.join(shot, "fx")))
+        # now sync with the current (full) config
+        rep = pc.sync_structure(self.cfg)
+        self.assertTrue(os.path.isdir(os.path.join(shot, "fx")))
+        self.assertTrue(os.path.isdir(os.path.join(shot, "nuke", "precomp")))
+        self.assertEqual(rep["shots"], 1)
+        self.assertTrue(any(p.endswith("/fx") for p in rep["added"]))
+
+    def test_sync_is_additive_and_keeps_files(self):
+        pc.ensure_shot(self.cfg, self.P, self.S, self.H)
+        comp = pc.task_dir(self.cfg, self.P, self.S, self.H, "comp")
+        marker = os.path.join(comp, "keep.txt")
+        open(marker, "w").close()
+        pc.sync_structure(self.cfg)
+        self.assertTrue(os.path.isfile(marker))  # untouched
+
+    def test_sync_prune_removes_empty_only(self):
+        pc.ensure_shot(self.cfg, self.P, self.S, self.H)
+        shot = os.path.join(self.sroot, self.P, self.S, self.H)
+        os.makedirs(os.path.join(shot, "oldempty"))
+        os.makedirs(os.path.join(shot, "oldfull"))
+        open(os.path.join(shot, "oldfull", "work.nk"), "w").close()
+        rep = pc.sync_structure(self.cfg, prune=True)
+        self.assertFalse(os.path.isdir(os.path.join(shot, "oldempty")))   # empty -> gone
+        self.assertTrue(os.path.isdir(os.path.join(shot, "oldfull")))     # has file -> kept
+        self.assertTrue(any(p.endswith("/oldempty") for p in rep["removed"]))
+        self.assertTrue(any(p.endswith("/oldfull") for p in rep["kept_nonempty"]))
+
+    def test_sync_without_prune_keeps_extras(self):
+        pc.ensure_shot(self.cfg, self.P, self.S, self.H)
+        shot = os.path.join(self.sroot, self.P, self.S, self.H)
+        os.makedirs(os.path.join(shot, "oldempty"))
+        pc.sync_structure(self.cfg)  # no prune
+        self.assertTrue(os.path.isdir(os.path.join(shot, "oldempty")))
+
+    def test_sync_prune_keeps_nuke_parent(self):
+        pc.ensure_shot(self.cfg, self.P, self.S, self.H)
+        shot = os.path.join(self.sroot, self.P, self.S, self.H)
+        pc.sync_structure(self.cfg, prune=True)
+        self.assertTrue(os.path.isdir(os.path.join(shot, "nuke")))        # parent of nuke/precomp survives
 
     # --- context inference ---
     def test_context_from_script_in_nuke_subfolder(self):

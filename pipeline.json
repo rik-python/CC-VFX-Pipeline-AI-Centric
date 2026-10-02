@@ -23,12 +23,20 @@
     "ai/training/configs", "ai/training/runs"
   ],
   "shot_structure": [
-    "plates", "nuke", "ai_input", "ai_output",
-    "rotopaint", "comp", "elements", "comfyui", "workflow",
+    "plates", "nuke", "nuke/precomp", "rotopaint",
+    "track", "layout", "anim", "fx", "lighting", "render",
+    "ai_input", "ai_output", "comp",
+    "elements", "comfyui", "workflow",
     "cache", "review", "delivery"
   ],
   "task_folders": {
     "rotopaint": "rotopaint",
+    "track": "track",
+    "layout": "layout",
+    "anim": "anim",
+    "fx": "fx",
+    "lighting": "lighting",
+    "render": "render",
     "ai": "ai_output",
     "comp": "comp"
   }

@@ -13,7 +13,7 @@ e.g. `shwx_101_010_0010_ai_FirstPass_rikinp_v01.exr`
 | part  | part / episode | `101` |
 | seq   | sequence | `010` |
 | shot  | shot | `0010` |
-| task  | rotopaint / ai / comp ... | `ai` |
+| task  | rotopaint / track / layout / anim / fx / lighting / render / ai / comp | `ai` |
 | type  | SlapComp / FirstPassSingle / FirstPassVideo / WIP / CF / TF | `FirstPass` |
 | artist| your name | `rikinp` |
 | version | 2-digit, per shot+task | `v01` |
@@ -41,6 +41,8 @@ Build folders:
 ```bash
 python pipeline_core.py init_show                 # show-level folders, once
 python pipeline_core.py new_shot 101 010 0010     # a shot: new_shot <PART> <SEQ> <SHOT>
+python pipeline_core.py sync                       # after a config change: add new folders to all existing shots
+python pipeline_core.py sync --prune               # also remove dropped folders (empty only, never deletes data)
 ```
 
 Settings live in `~/.comfyx_local.json` (env `COMFYX_ROOT` / `COMFYX_SHOW` / `COMFYX_ARTIST`
@@ -74,11 +76,18 @@ type list in `types`.
       <seq>/                            sequence, e.g. 010
         <shot>/                         shot, e.g. 0010
           plates/                       localized client source EXR (ACEScg)
-          nuke/                         .nk work scripts (task = RotoPaint/AI/Comp)
+          nuke/                         .nk work scripts (Nuke tasks)
+            precomp/                    precomp .nk / renders (working subfolder, not a task)
+          rotopaint/                    roto mattes + paint cleanup               [task: RotoPaint, Nuke]
+          track/                        matchmove / camera solve                  [task: track, 3DE/Nuke]
+          layout/                       layout / blocking                         [task: layout, 3D]
+          anim/                         animation                                 [task: anim, 3D]
+          fx/                           FX / sims                                 [task: fx, Houdini]
+          lighting/                     CG lighting setups                        [task: lighting, 3D]
+          render/                       CG renders coming in (beauty / AOVs)      [task: render, 3D out]
           ai_input/                     frames exported from Nuke to feed AI
           ai_output/                    AI results back (ComfyUI / Kling / Runway)   [task: AI]
-          rotopaint/                    roto mattes + paint cleanup               [task: RotoPaint]
-          comp/                         final Nuke comp renders                   [task: Comp]
+          comp/                         final Nuke comp renders                   [task: Comp, Nuke]
           elements/                     CG / stock / matte elements
           comfyui/                      ComfyUI working files
           workflow/                     workflow.json used (reproducibility)
@@ -93,3 +102,6 @@ type list in `types`.
 - Version is per shot+task (shared across types). The Nuke script version drives the render
   version, so a `comp_v03` script produces `comp_v03` renders.
 - `raw` = as-received, never edit in place. `processed` = your treated result.
+- The 3D discipline tasks (track / layout / anim / fx / lighting / render) get their folders +
+  enforced names from the engine/CLI; the Nuke **Save Script / Write** buttons only cover the
+  Nuke tasks (RotoPaint / AI / Comp). `precomp` is a working subfolder inside `nuke/`, not a task.

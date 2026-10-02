@@ -200,6 +200,57 @@ def list_shots(cfg, show=None):
     return out
 
 
+def sync_structure(cfg, prune=False):
+    """Reconcile the existing show + every existing shot against the current config.
+
+    Add-only by default (safe): creates any folder in show_structure / shot_structure
+    that a shot is missing, so a config change (new task/folder) propagates to shots
+    that already exist - no deleting and rebuilding the show.
+
+    prune=True also removes shot folders no longer in the config, but ONLY when they
+    are empty; a folder that still holds files is kept and reported, never deleted.
+    Prune compares the shot's direct children against the top level of shot_structure
+    (so a parent like `nuke` is kept even though its `nuke/precomp` child is nested).
+
+    Returns {"shots": N, "added": [...], "removed": [...], "kept_nonempty": [...]}.
+    """
+    report = {"shots": 0, "added": [], "removed": [], "kept_nonempty": []}
+
+    # show-level (add-only)
+    base = show_root(cfg)
+    for sub in cfg.get("show_structure", []):
+        d = os.path.join(base, sub)
+        if not os.path.isdir(d):
+            os.makedirs(d, exist_ok=True)
+            report["added"].append(_fwd(d))
+
+    shots = list_shots(cfg)
+    report["shots"] = len(shots)
+    keep_top = {s.split("/")[0] for s in cfg.get("shot_structure", [])}
+    keep_top.add(cfg.get("script_folder", "nuke"))
+
+    for part, seq, shot in shots:
+        sbase = shot_base(cfg, part, seq, shot)
+        # add missing
+        for sub in cfg.get("shot_structure", []):
+            d = os.path.join(sbase, sub)
+            if not os.path.isdir(d):
+                os.makedirs(d, exist_ok=True)
+                report["added"].append(_fwd(d))
+        # prune (empty-only) folders dropped from config
+        if prune and os.path.isdir(sbase):
+            for name in sorted(os.listdir(sbase)):
+                d = os.path.join(sbase, name)
+                if not os.path.isdir(d) or name in keep_top:
+                    continue
+                if os.listdir(d):
+                    report["kept_nonempty"].append(_fwd(d))
+                else:
+                    os.rmdir(d)
+                    report["removed"].append(_fwd(d))
+    return report
+
+
 def context_from_path(cfg, path):
     """Infer (part, seq, shot) from a path under <root>/<show>/<part>/<seq>/<shot>/...
 
@@ -287,11 +338,32 @@ if __name__ == "__main__":
         print(ensure_show(cfg))
     elif args and args[0] == "new_shot" and len(args) == 4:
         print(ensure_shot(cfg, args[1], args[2], args[3]))
+    elif args and args[0] == "sync":
+        prune = "--prune" in args[1:]
+        root = cfg.get("root", "")
+        if not root or not os.path.isdir(root):
+            print("root not reachable ({0}); mount the shared drive, then run sync."
+                  .format(root or "unset"))
+            sys.exit(0)
+        rep = sync_structure(cfg, prune=prune)
+        print("sync: {0} shot(s) checked, {1} folder(s) added".format(rep["shots"], len(rep["added"])))
+        for d in rep["added"]:
+            print("  + " + d)
+        if prune:
+            print("  {0} empty folder(s) removed".format(len(rep["removed"])))
+            for d in rep["removed"]:
+                print("  - " + d)
+            if rep["kept_nonempty"]:
+                print("  kept (not in config but NOT empty - left alone):")
+                for d in rep["kept_nonempty"]:
+                    print("  ! " + d)
+        elif not rep["added"]:
+            print("  everything already up to date.")
     elif args and args[0] == "path" and len(args) >= 6:
         part, seq, shot, task, type_ = args[1:6]
         ext = args[6] if len(args) > 6 else None
         print(output_path(cfg, part, seq, shot, task, type_, ext=ext, frame_pad="%04d"))
     else:
         print("usage: pipeline_core.py config <root|show|artist> <value> | doctor | "
-              "init_show | new_shot <PART> <SEQ> <SHOT> | "
+              "init_show | new_shot <PART> <SEQ> <SHOT> | sync [--prune] | "
               "path <PART> <SEQ> <SHOT> <task> <type> [ext]")

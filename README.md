@@ -76,7 +76,20 @@ When the pipeline changes, get the latest in one click:
 - **Windows:** double-click **`update.bat`**
 - **mac:** double-click **`update.command`** (first time only, run `chmod +x update.command` so macOS lets you double-click it)
 
-It runs `git pull` and reminds you to **restart Nuke** so the new code loads. Never edit files inside this folder, that is what keeps updates one click forever (local edits cause pull conflicts).
+It runs `git pull`, then **`sync`** (adds any new folders the update introduced into your
+existing shots, so you never delete and rebuild the show), and reminds you to **restart Nuke** so
+the new code loads. Never edit files inside this folder, that is what keeps updates one click
+forever (local edits cause pull conflicts).
+
+### Changing the folder structure for everyone
+Edit `pipeline.json`, push. When teammates update, `sync` adds the new folders to every existing
+shot automatically. Adds are always safe. To remove folders you dropped from the config, run it
+manually:
+```bash
+python pipeline_core.py sync --prune
+```
+`--prune` only deletes folders that are **empty**; anything still holding files is kept and
+reported, never deleted.
 
 ---
 

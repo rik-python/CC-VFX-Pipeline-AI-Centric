@@ -25,6 +25,17 @@ if ! git pull; then
 fi
 
 echo
+if command -v python3 >/dev/null 2>&1; then
+    echo "Syncing folder structure to existing shots..."
+    python3 pipeline_core.py sync
+elif command -v python >/dev/null 2>&1; then
+    echo "Syncing folder structure to existing shots..."
+    python pipeline_core.py sync
+else
+    echo "Python not found - skipping folder sync. Install Python 3 to auto-add new folders."
+fi
+
+echo
 echo "============================================"
 echo "  Done. RESTART NUKE to load the update."
 echo "============================================"

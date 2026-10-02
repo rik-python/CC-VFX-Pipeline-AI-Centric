@@ -27,6 +27,16 @@ if errorlevel 1 (
 )
 
 echo.
+where python >nul 2>&1
+if errorlevel 1 (
+    echo Python not found - skipping folder sync.
+    echo Install Python 3 so updates can add new folders to your shots.
+) else (
+    echo Syncing folder structure to existing shots...
+    python pipeline_core.py sync
+)
+
+echo.
 echo ============================================
 echo   Done. RESTART NUKE to load the update.
 echo ============================================
