@@ -134,6 +134,37 @@ class PipelineCore(unittest.TestCase):
         self.assertIsNone(pc.parse_version("random.nk"))
         self.assertIsNone(pc.parse_version(""))
 
+    def test_parse_name_full(self):
+        d = pc.parse_name("shwx_101_010_0010_comp_WIP_rikinp_v03.nk")
+        self.assertEqual((d["show"], d["part"], d["seq"], d["shot"]), ("shwx", "101", "010", "0010"))
+        self.assertEqual((d["task"], d["type"], d["artist"], d["version"]), ("comp", "WIP", "rikinp", 3))
+
+    def test_parse_name_ignores_frame_pad_and_ext(self):
+        d = pc.parse_name("shwx_101_010_0010_ai_FirstPass_rikinp_v12.%04d.exr")
+        self.assertEqual(d["task"], "ai")
+        self.assertEqual(d["version"], 12)
+
+    def test_parse_name_none_for_nonpipeline(self):
+        self.assertIsNone(pc.parse_name("random_thing.nk"))
+        self.assertIsNone(pc.parse_name(""))
+
+    def test_write_path_mirrors_open_script(self):
+        script = os.path.join(self.sroot, self.P, self.S, self.H, "nuke",
+                              "shwx_101_010_0010_comp_WIP_rikinp_v03.nk")
+        wp = pc.write_path_from_script(self.cfg, script)
+        # same stem + version, in the comp task folder, as a padded exr sequence
+        self.assertTrue(wp.endswith("101/010/0010/comp/shwx_101_010_0010_comp_WIP_rikinp_v03.%04d.exr"), wp)
+
+    def test_write_path_uses_task_folder_mapping(self):
+        script = os.path.join(self.sroot, self.P, self.S, self.H, "nuke",
+                              "shwx_101_010_0010_ai_FirstPass_rikinp_v05.nk")
+        wp = pc.write_path_from_script(self.cfg, script)
+        self.assertIn("/ai_output/", wp)          # ai task -> ai_output folder
+        self.assertTrue(wp.endswith("_ai_FirstPass_rikinp_v05.%04d.exr"), wp)
+
+    def test_write_path_none_for_unnamed_script(self):
+        self.assertIsNone(pc.write_path_from_script(self.cfg, "/tmp/untitled.nk"))
+
     def test_script_path_name_and_location(self):
         p = pc.script_path(self.cfg, self.P, self.S, self.H, "comp", "WIP", version=1)
         self.assertTrue(p.endswith("101/010/0010/nuke/shwx_101_010_0010_comp_WIP_rikinp_v01.nk"))

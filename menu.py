@@ -22,10 +22,9 @@ for _label, _task in _TASKS:
         "import nuke_pipeline; nuke_pipeline.save_script('{0}')".format(_task),
     )
 
-# Pipeline-aware Write nodes (auto path + name; version matches the script).
-write_menu = comfy_menu.addMenu("Pipeline Write")
-for _label, _task in _TASKS:
-    write_menu.addCommand(
-        _label,
-        "import nuke_pipeline; nuke_pipeline.create_write('{0}')".format(_task),
-    )
+# Pipeline-aware Write node. Auto-derives task/type/version/shot from the OPEN
+# script, so the render mirrors the .nk exactly. One button, no picking.
+comfy_menu.addCommand(
+    "Pipeline Write (from script)",
+    "import nuke_pipeline; nuke_pipeline.create_write()",
+)

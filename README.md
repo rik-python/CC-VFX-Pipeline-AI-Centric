@@ -107,9 +107,11 @@ python pipeline_core.py new_shot 101 010 0010   # new_shot <PART> <SEQ> <SHOT>
 - Run it again later to bump the version automatically.
 
 **Add a render Write node:**
-- Select the node to output, then Comfy Compositor > **Pipeline Write > Comp**.
-- Pick the type. The Write's file path is set automatically, with the **same version as your
-  script**. Press **Render** (F7) to write the EXRs into the shot's task folder.
+- Select the node to output, then Comfy Compositor > **Pipeline Write (from script)**.
+- No picking. The Write mirrors your **open script** exactly - same task, type, version and shot -
+  so a `..._comp_WIP_..._v03.nk` script writes `..._comp_WIP_..._v03.%04d.exr` into the `comp`
+  folder. Press **Render** (F7).
+- (If the script isn't saved with a pipeline name yet, it falls back to asking for the shot + type.)
 
 **Run an AI workflow** (Comfy panel): Comfy Compositor > Open Panel, pick a workflow, set
 parameters, Generate. Results come back as Read nodes.

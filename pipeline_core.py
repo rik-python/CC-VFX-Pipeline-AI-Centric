@@ -111,6 +111,25 @@ def parse_version(filename):
     return int(m.group(1)) if m else None
 
 
+def parse_name(filename):
+    """Parse a pipeline filename into its tokens, or None if it is not one.
+
+    Expects the stem show_part_seq_shot_task_type_artist_vNN (token values contain
+    no underscores). Extension and frame pad are ignored. 'version' comes back int.
+    """
+    stem = os.path.basename(filename or "").split(".")[0]
+    m = re.match(
+        r"^(?P<show>[^_]+)_(?P<part>[^_]+)_(?P<seq>[^_]+)_(?P<shot>[^_]+)_"
+        r"(?P<task>[^_]+)_(?P<type>[^_]+)_(?P<artist>[^_]+)_v(?P<version>\d+)$",
+        stem,
+    )
+    if not m:
+        return None
+    d = m.groupdict()
+    d["version"] = int(d["version"])
+    return d
+
+
 def _version_regex(cfg, part, seq, shot, task):
     """Match this show+part+seq+shot+task at any type/version: version per shot+task."""
     prefix = "_".join(re.escape(x) for x in (cfg["show"], part, seq, shot, task))
@@ -155,6 +174,29 @@ def output_path(cfg, part, seq, shot, task, type_, ext=None, frame_pad=None,
     if make_dirs:
         os.makedirs(folder, exist_ok=True)
     return _fwd(os.path.join(folder, make_filename(cfg, part, seq, shot, task, type_, version, ext, frame_pad)))
+
+
+def write_path_from_script(cfg, script_path, ext=None, frame_pad="%04d", make_dirs=False):
+    """Render path that mirrors an open .nk script: same name, the task's render folder, image ext.
+
+    task/type/version/stem come from the script's filename; part/seq/shot from its
+    location (falling back to the filename's tokens). So a `..._comp_WIP_..._v03.nk`
+    script yields `.../comp/..._comp_WIP_..._v03.%04d.exr` - zero re-picking, version
+    locked to the script. Returns None if the script is not pipeline-named (the caller
+    should then fall back to asking). Forward-slashed.
+    """
+    info = parse_name(script_path)
+    if not info:
+        return None
+    ctx = context_from_path(cfg, script_path)
+    part, seq, shot = ctx if ctx else (info["part"], info["seq"], info["shot"])
+    folder = task_dir(cfg, part, seq, shot, info["task"])
+    if make_dirs:
+        os.makedirs(folder, exist_ok=True)
+    ext = (ext or cfg.get("format", "exr")).lstrip(".")
+    stem = os.path.basename(script_path).split(".")[0]
+    name = "{0}.{1}.{2}".format(stem, frame_pad, ext) if frame_pad else "{0}.{1}".format(stem, ext)
+    return _fwd(os.path.join(folder, name))
 
 
 def script_path(cfg, part, seq, shot, task, type_, version=None, make_dirs=False):

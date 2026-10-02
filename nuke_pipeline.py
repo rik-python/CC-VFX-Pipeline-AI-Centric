@@ -175,20 +175,29 @@ def save_script(task="comp"):
 def create_write(task="comp", ext="exr"):
     """Create a pipeline-correct Write node wired to the selected node.
 
-    Render version matches the open script's version (shared per shot+task), so a
-    v03 script renders v03. Falls back to next free version if the script is unnamed.
+    Auto-derives everything from the OPEN SCRIPT: task, type, version and shot all
+    mirror the saved .nk, so the render name matches the script exactly (a
+    ..._comp_WIP_..._v03.nk script writes ..._comp_WIP_..._v03.%04d.exr into the comp
+    folder). No re-picking. If the script is unsaved or not pipeline-named, falls back
+    to the shot + type pickers (using the task passed from the menu).
     """
     cfg = pc.load_config()
-    ctx = _resolve(cfg)
-    if not ctx:
-        return None
-    type_ = _choose_type(cfg)
-    if type_ is None:
-        return None
-    part, seq, shot = ctx
-    version = pc.parse_version(nuke.root().name())
-    path = pc.output_path(cfg, part, seq, shot, task, type_, ext=ext, frame_pad="%04d",
-                          version=version, make_dirs=True)
+    script = nuke.root().name()
+    info = pc.parse_name(script)
+    if info:                                   # auto: mirror the open script
+        task = info["task"]
+        ext = cfg.get("format", "exr")
+        path = pc.write_path_from_script(cfg, script, ext=ext, frame_pad="%04d", make_dirs=True)
+    else:                                      # fallback: unnamed script -> ask
+        ctx = _resolve(cfg)
+        if not ctx:
+            return None
+        type_ = _choose_type(cfg)
+        if type_ is None:
+            return None
+        part, seq, shot = ctx
+        path = pc.output_path(cfg, part, seq, shot, task, type_, ext=ext, frame_pad="%04d",
+                              version=pc.parse_version(script), make_dirs=True)
 
     sel = nuke.selectedNodes()
     w = nuke.nodes.Write(file=path, name="Write_{0}_1".format(task))
