@@ -1,8 +1,8 @@
-"""ComfyXNuke pipeline core: config-driven paths, naming, versioning.
+"""CC Pipeline (AI Centric) core: config-driven paths, naming, versioning.
 
-Stdlib only (runs inside Nuke's embedded Python). Both the Nuke panel and the
-ComfyUI save side import this so every freelancer resolves identical paths and
-names. Pure functions take a cfg dict; load_config() is the convenience loader.
+Stdlib only (runs inside Nuke's embedded Python). The Nuke integration imports
+this so every freelancer resolves identical paths and names. Pure functions take
+a cfg dict; load_config() is the convenience loader.
 
 Hierarchy:  <root>/<show>/<part>/<seq>/<shot>/<task>/{nk,render,precomp,cache,...}
             Common shot folders (plates/review/delivery/elements) sit at shot level.
@@ -17,7 +17,9 @@ import os
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LOCAL_PATH = os.path.join(os.path.expanduser("~"), ".comfyx_local.json")
+LOCAL_PATH = os.path.join(os.path.expanduser("~"), ".cc_pipeline.json")
+# Legacy per-machine config from the old "ComfyXNuke" name - still read as a fallback.
+OLD_LOCAL_PATH = os.path.join(os.path.expanduser("~"), ".comfyx_local.json")
 
 
 def _fwd(path):
@@ -29,27 +31,33 @@ def _fwd(path):
 def load_config(project_json=None):
     """Load pipeline.json (versioned default), then overlay per-machine overrides.
 
-    Config discovery: arg -> env COMFYX_CONFIG -> ./pipeline.json next to this file.
+    Config discovery: arg -> env CC_CONFIG (or legacy COMFYX_CONFIG) -> ./pipeline.json.
     Per-machine overrides (differ per freelancer/machine/job):
-      - ~/.comfyx_local.json  {"root":..., "show":..., "artist":...}
-      - env COMFYX_ROOT / COMFYX_SHOW / COMFYX_ARTIST
+      - ~/.cc_pipeline.json  {"root":..., "show":..., "artist":...}
+        (legacy ~/.comfyx_local.json is still read, then the new file wins)
+      - env CC_ROOT / CC_SHOW / CC_ARTIST  (legacy COMFYX_* still honored)
     """
-    path = project_json or os.environ.get("COMFYX_CONFIG") or os.path.join(HERE, "pipeline.json")
+    path = (project_json or os.environ.get("CC_CONFIG") or os.environ.get("COMFYX_CONFIG")
+            or os.path.join(HERE, "pipeline.json"))
     with open(path, "r", encoding="utf-8") as fh:
         cfg = json.load(fh)
 
-    if os.path.isfile(LOCAL_PATH):
-        with open(LOCAL_PATH, "r", encoding="utf-8") as fh:
-            cfg.update({k: v for k, v in json.load(fh).items() if v})
+    for local in (OLD_LOCAL_PATH, LOCAL_PATH):   # legacy first, new wins
+        if os.path.isfile(local):
+            with open(local, "r", encoding="utf-8") as fh:
+                cfg.update({k: v for k, v in json.load(fh).items() if v})
 
-    for env, key in (("COMFYX_ROOT", "root"), ("COMFYX_SHOW", "show"), ("COMFYX_ARTIST", "artist")):
-        if os.environ.get(env):
-            cfg[key] = os.environ[env]
+    for new_env, old_env, key in (("CC_ROOT", "COMFYX_ROOT", "root"),
+                                  ("CC_SHOW", "COMFYX_SHOW", "show"),
+                                  ("CC_ARTIST", "COMFYX_ARTIST", "artist")):
+        val = os.environ.get(new_env) or os.environ.get(old_env)
+        if val:
+            cfg[key] = val
     return cfg
 
 
 def set_local(key, value, path=LOCAL_PATH):
-    """Write one per-machine setting (root/show/artist) to ~/.comfyx_local.json. Merges."""
+    """Write one per-machine setting (root/show/artist) to ~/.cc_pipeline.json. Merges."""
     data = {}
     if os.path.isfile(path):
         with open(path, "r", encoding="utf-8") as fh:
@@ -84,7 +92,7 @@ def ensure_shot(cfg, part, seq, shot):
 
     Shot level gets the common folders (shot_common: plates/review/delivery/elements).
     Each task in `tasks` gets its own folder holding task_subfolders (nk/render/precomp/
-    cache) plus any task_extras (e.g. ai: input/output/workflow/comfyui).
+    cache) plus any task_extras (e.g. ai: input/output/workflow).
     """
     base = shot_base(cfg, part, seq, shot)
     for sub in cfg.get("shot_common", []):

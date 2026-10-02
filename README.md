@@ -2,15 +2,12 @@
 
 **Version 1**
 
-A **free, AI-centric VFX pipeline for freelancers**, built around Nuke and ComfyUI.
+A **free VFX pipeline for freelancers**, built around Nuke.
 (Comfy Compositing pipeline. Repo: `CC-VFX-Pipeline-AI-Centric`.)
 
-Two parts in one repo:
-1. **Pipeline automation** - one shared config builds an identical folder structure and enforces
-   naming + versioning for every artist on a show. No more files saved in the wrong place or
-   named inconsistently.
-2. **Comfy Compositor panel** - a manifest-driven Nuke side panel that runs ComfyUI workflows
-   from inside Nuke and drops results back as Read nodes.
+One shared config builds an identical folder structure and enforces naming + versioning for every
+artist on a show, and a Nuke menu saves scripts and renders (EXR + MOV) into the right place
+automatically. No more files saved in the wrong place or named inconsistently.
 
 Designed so a non-technical artist can clone it and be running in about 5 minutes.
 
@@ -33,8 +30,8 @@ Designed so a non-technical artist can clone it and be running in about 5 minute
 ## Requirements
 
 - **Nuke** (13+ recommended).
-- **Python 3** on your PATH (for the command-line setup; Nuke uses its own embedded Python).
-- **ComfyUI** running locally (`127.0.0.1:8188`) if you want the Comfy panel.
+- **Python 3** on your PATH (for the installer / command-line setup; Nuke uses its own embedded Python).
+- **git** (for the one-click updater).
 - A **shared drive** for team work (Dropbox / Google Drive / LucidLink). Everyone mounts the same
   one.
 
@@ -56,10 +53,10 @@ first time run `chmod +x install.command` once). It asks for:
 - your **Nuke folder** (default `~/.nuke`).
 
 Then it saves your settings, wires Nuke (adds `pluginAddPath` to `init.py`), checks dependencies
-(Python, git, the shared drive, ComfyUI), offers to create the show folders, and runs the doctor.
+(Python, git, the shared drive), offers to create the show folders, and runs the doctor.
 Re-running it is safe.
 
-**3. Restart Nuke.** You'll see **CC VFX Menu** and **CC AI Menu** in the top menu bar.
+**3. Restart Nuke.** You'll see the **CC VFX Menu** in the top menu bar.
 
 <details>
 <summary>Manual setup (if you'd rather not use the installer)</summary>
@@ -105,29 +102,26 @@ reported, never deleted.
 
 ## Daily use
 
-**Make a shot** (from the menu: Comfy Compositor > New Shot, or the CLI):
+**Make a shot** (from the menu: CC VFX Menu > New Shot, or the CLI):
 ```bash
 python pipeline_core.py new_shot 101 010 0010   # new_shot <PART> <SEQ> <SHOT>
 ```
 
 **Save your Nuke script** with the correct name + version:
-- Comfy Compositor > **Pipeline Save Script > Comp** (or Prep / RotoPaint / AI)
+- CC VFX Menu > **Pipeline Save Script > Comp** (or Prep / RotoPaint / AI)
 - Pick the shot from the dropdown, pick a **type** (WIP / CF / TF / SlapComp / ...).
 - Saves into that task's `nk/` folder, e.g.
   `...\shwx\101\010\0010\comp\nk\shwx_101_010_0010_comp_WIP_rikinp_v01.nk`.
 - Run it again later to bump the version automatically.
 
 **Add render Write nodes:**
-- Select the node to output, then Comfy Compositor > **Pipeline Write (EXR + MOV)**.
+- Select the node to output, then CC VFX Menu > **Pipeline Write (EXR + MOV)**.
 - No picking. It reads your **open script** and makes **two** Write nodes that mirror it exactly -
   an EXR into `<task>/render/<stem>/exr/` and a MOV into `<task>/render/<stem>/mov/`. So a
   `..._comp_WIP_..._v03.nk` script writes into
   `...\comp\render\shwx_101_010_0010_comp_WIP_rikinp_v03\{exr,mov}\`. Press **Render** (F7).
 - (If the script isn't saved with a pipeline name yet, it just tells you to Pipeline Save Script
   first - it never asks you to pick a shot.)
-
-**Run an AI workflow** (Comfy panel): Comfy Compositor > Open Panel, pick a workflow, set
-parameters, Generate. Results come back as Read nodes.
 
 ### Going from WIP v08 to Creative Final v09
 Just Save Script again and pick type **CF**. The version auto-bumps to v09 (next after the highest
@@ -159,13 +153,14 @@ Name: `{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}`
 
 ## Configuration
 
-- **`~/.comfyx_local.json`** (per machine): your `root`, `show`, `artist`. Set via the `config`
-  command. Switch shows with `python pipeline_core.py config show <code>`.
+- **`~/.cc_pipeline.json`** (per machine): your `root`, `show`, `artist`. Set by the installer or
+  the `config` command. Switch shows with `python pipeline_core.py config show <code>`. (The old
+  `~/.comfyx_local.json` is still read as a fallback.)
 - **`pipeline.json`** (shared, versioned): the folder sets (`show_structure`, `shot_common`,
   `tasks`, `task_subfolders`, `task_extras`), the `types` list, and the colorspaces
   (`write_colorspace`, `review_colorspace`). Edit here to change the structure for everyone.
 
-Environment overrides (optional): `COMFYX_ROOT`, `COMFYX_SHOW`, `COMFYX_ARTIST`.
+Environment overrides (optional): `CC_ROOT`, `CC_SHOW`, `CC_ARTIST` (legacy `COMFYX_*` still honored).
 
 ---
 
@@ -214,9 +209,12 @@ python -m unittest -v
 Core modules:
 - `pipeline_core.py` - config, folder scaffolding, naming, versioning, shot listing.
 - `nuke_pipeline.py` - Nuke Save Script / Write + the pickers.
-- `menu.py` - Nuke menu registration.
-- `comfy_bridge.py` - the Comfy Compositor panel.
+- `menu.py` - Nuke menu registration (CC VFX Menu) + default OCIO color.
+- `install.py` - first-time interactive setup.
 - `pipeline.json` - the shared config. `test_pipeline_core.py` - tests.
+
+(`comfy_bridge.py` + `Workflows/` are a separate, dormant Nuke<->ComfyUI panel kept in the repo but
+not wired into the pipeline menus.)
 
 ---
 

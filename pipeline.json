@@ -33,6 +33,6 @@
   "tasks": ["prep", "rotopaint", "ai", "comp"],
   "task_subfolders": ["nk", "render", "precomp", "cache"],
   "task_extras": {
-    "ai": ["input", "output", "workflow", "comfyui"]
+    "ai": ["input", "output", "workflow"]
   }
 }

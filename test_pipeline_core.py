@@ -28,7 +28,7 @@ def _cfg(root):
         "shot_common": ["plates", "review", "delivery", "elements"],
         "tasks": ["prep", "rotopaint", "ai", "comp"],
         "task_subfolders": ["nk", "render", "precomp", "cache"],
-        "task_extras": {"ai": ["input", "output", "workflow", "comfyui"]},
+        "task_extras": {"ai": ["input", "output", "workflow"]},
     }
 
 
@@ -67,7 +67,7 @@ class PipelineCore(unittest.TestCase):
 
     def test_ensure_shot_ai_extras(self):
         pc.ensure_shot(self.cfg, self.P, self.S, self.H)
-        for sub in ("input", "output", "workflow", "comfyui"):
+        for sub in ("input", "output", "workflow"):
             self.assertTrue(os.path.isdir(self._shot("ai", sub)), "ai/" + sub)
         # non-ai tasks do NOT get the extras
         self.assertFalse(os.path.isdir(self._shot("comp", "input")))
@@ -314,23 +314,51 @@ class PipelineCore(unittest.TestCase):
         self.assertEqual(st["root configured"], "fail")
 
     # --- env override ---
-    def test_env_overrides(self):
-        os.environ["COMFYX_ROOT"] = self.root
-        os.environ["COMFYX_SHOW"] = "zzz"
-        os.environ["COMFYX_ARTIST"] = "ab"
+    def _min_cfg_file(self):
         cfg_path = os.path.join(self.root, "pipeline.json")
         with open(cfg_path, "w") as fh:
             json.dump({"root": "P:/WRONG", "show": "shwx", "artist": "rikinp",
                        "naming": "{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}",
                        "tasks": [], "shot_common": [], "show_structure": []}, fh)
+        return cfg_path
+
+    def test_env_overrides_cc(self):
+        os.environ["CC_ROOT"] = self.root
+        os.environ["CC_SHOW"] = "zzz"
+        os.environ["CC_ARTIST"] = "ab"
         try:
-            cfg = pc.load_config(cfg_path)
-            self.assertEqual(cfg["root"], self.root)
-            self.assertEqual(cfg["show"], "zzz")
-            self.assertEqual(cfg["artist"], "ab")
+            cfg = pc.load_config(self._min_cfg_file())
+            self.assertEqual((cfg["root"], cfg["show"], cfg["artist"]), (self.root, "zzz", "ab"))
         finally:
-            for e in ("COMFYX_ROOT", "COMFYX_SHOW", "COMFYX_ARTIST"):
+            for e in ("CC_ROOT", "CC_SHOW", "CC_ARTIST"):
                 del os.environ[e]
+
+    def test_env_overrides_legacy_comfyx_fallback(self):
+        os.environ["COMFYX_ROOT"] = self.root
+        os.environ["COMFYX_ARTIST"] = "legacy"
+        try:
+            cfg = pc.load_config(self._min_cfg_file())
+            self.assertEqual(cfg["root"], self.root)
+            self.assertEqual(cfg["artist"], "legacy")   # old COMFYX_* still honored
+        finally:
+            for e in ("COMFYX_ROOT", "COMFYX_ARTIST"):
+                del os.environ[e]
+
+    def test_local_file_new_wins_over_legacy(self):
+        old = os.path.join(self.root, "old_local.json")
+        new = os.path.join(self.root, "new_local.json")
+        with open(old, "w") as fh:
+            json.dump({"artist": "oldguy", "show": "oldshow"}, fh)
+        with open(new, "w") as fh:
+            json.dump({"artist": "newguy"}, fh)   # show omitted -> legacy value survives
+        saved = (pc.LOCAL_PATH, pc.OLD_LOCAL_PATH)
+        pc.LOCAL_PATH, pc.OLD_LOCAL_PATH = new, old
+        try:
+            cfg = pc.load_config(self._min_cfg_file())
+            self.assertEqual(cfg["artist"], "newguy")   # new file wins
+            self.assertEqual(cfg["show"], "oldshow")     # legacy fills the gap
+        finally:
+            pc.LOCAL_PATH, pc.OLD_LOCAL_PATH = saved
 
 
 if __name__ == "__main__":

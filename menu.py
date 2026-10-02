@@ -1,8 +1,7 @@
 """
-CC menus - Nuke menu registration. Adds two menus to Nuke's top menu bar:
-  - "CC VFX Menu": pipeline (New Shot, Save Script, Write)
-  - "CC AI Menu":  the ComfyUI panel
-Add this directory to NUKE_PATH or nuke.pluginAddPath() in ~/.nuke/init.py.
+CC VFX Menu - Nuke menu registration. Adds "CC VFX Menu" to Nuke's top menu bar
+(New Shot, Pipeline Save Script, Pipeline Write) and sets OCIO/ACES as the default
+color. Add this directory to NUKE_PATH or nuke.pluginAddPath() in ~/.nuke/init.py.
 """
 import nuke
 
@@ -57,7 +56,3 @@ cc_vfx.addCommand(
     "Pipeline Write (EXR + MOV)",
     "import nuke_pipeline; nuke_pipeline.create_write()",
 )
-
-# --- CC AI Menu : the ComfyUI panel --------------------------------------------
-cc_ai = menubar.addMenu("CC AI Menu")
-cc_ai.addCommand("Open Panel", "import comfy_bridge; comfy_bridge.show_panel()")

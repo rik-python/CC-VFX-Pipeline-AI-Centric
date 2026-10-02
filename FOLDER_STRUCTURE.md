@@ -46,9 +46,9 @@ python pipeline_core.py sync                       # after a config change: add 
 python pipeline_core.py sync --prune               # also remove dropped folders (empty only, never data)
 ```
 
-Settings live in `~/.comfyx_local.json` (env `COMFYX_ROOT` / `COMFYX_SHOW` / `COMFYX_ARTIST`
-override). Folder sets live in `pipeline.json` (`shot_common`, `tasks`, `task_subfolders`,
-`task_extras`, `show_structure`), type list in `types`.
+Settings live in `~/.cc_pipeline.json` (env `CC_ROOT` / `CC_SHOW` / `CC_ARTIST` override; the old
+`~/.comfyx_local.json` / `COMFYX_*` are still read as a fallback). Folder sets live in `pipeline.json`
+(`shot_common`, `tasks`, `task_subfolders`, `task_extras`, `show_structure`), type list in `types`.
 
 ## Tree
 
@@ -82,10 +82,9 @@ override). Folder sets live in `pipeline.json` (`shot_common`, `tasks`, `task_su
             precomp/                    precomp working files
             cache/                      Nuke scratch
           ai/                           the AI task also gets:
-            input/                      frames exported from Nuke to feed AI
-            output/                     AI results back (ComfyUI / Kling / Runway)
-            workflow/                   the workflow.json actually used (reproducibility)
-            comfyui/                    ComfyUI working files
+            input/                      frames exported from Nuke to feed the AI tool
+            output/                     AI results back (Kling / Runway / local tools)
+            workflow/                   the recipe / settings actually used (reproducibility)
 ```
 
 ### Renders (created at Write time)

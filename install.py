@@ -2,13 +2,12 @@
 """First-time installer for CC Pipeline (AI Centric).
 
 Interactive setup: artist/user name, show location (root + show code), and the
-Nuke folder. Writes ~/.comfyx_local.json, wires Nuke (pluginAddPath in init.py),
+Nuke folder. Writes ~/.cc_pipeline.json, wires Nuke (pluginAddPath in init.py),
 checks dependencies, optionally scaffolds the show, and runs the doctor.
 Re-running is safe (idempotent). Stdlib only.
 """
 import os
 import shutil
-import socket
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -43,14 +42,6 @@ def wire_nuke(nuke_dir, repo):
     return init_py, True
 
 
-def port_open(host, port, timeout=1.0):
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
-
-
 def main():
     print("\n=== CC Pipeline (AI Centric) - first-time setup ===\n")
     cfg = pc.load_config()
@@ -78,8 +69,6 @@ def main():
         "[OK] " if shutil.which("git") else "[WARN]"))
     print("  {0} shared drive reachable ({1})".format(
         "[OK] " if root and os.path.isdir(root) else "[WARN]", root or "unset"))
-    print("  {0} ComfyUI at 127.0.0.1:8188 (optional, for the AI panel)".format(
-        "[OK] " if port_open("127.0.0.1", 8188) else "[--] "))
 
     cfg = pc.load_config()
     if root and show and ask_yes("\nCreate the show-level folders now?", default=True):
@@ -96,7 +85,7 @@ def main():
             line += "\n         -> " + hint
         print(line)
 
-    print("\nDone. Restart Nuke, then use the CC VFX Menu / CC AI Menu up top.\n")
+    print("\nDone. Restart Nuke, then use the CC VFX Menu up top.\n")
 
 
 if __name__ == "__main__":

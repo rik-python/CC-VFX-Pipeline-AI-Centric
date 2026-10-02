@@ -4,6 +4,7 @@ __pycache__/
 .claude/
 
 # per-machine (never commit a personal config)
+.cc_pipeline.json
 .comfyx_local.json
 
 # render output / scratch, not source

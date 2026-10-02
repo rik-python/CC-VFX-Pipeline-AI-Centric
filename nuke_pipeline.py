@@ -1,4 +1,4 @@
-"""ComfyXNuke Nuke integration: pipeline-aware Save Script + Write nodes.
+"""CC VFX Nuke integration: pipeline-aware Save Script + Write nodes.
 
 Artist picks Show / Part / Seq / Shot from cascading dropdowns (or the shot is
 auto-detected from the open .nk path), picks a type from the preset list, and the
@@ -21,7 +21,7 @@ except ImportError:
 
 
 def _ask(label, default=""):
-    return (nuke.getInput("ComfyXNuke: " + label, default) or "").strip()
+    return (nuke.getInput("CC VFX: " + label, default) or "").strip()
 
 
 def _run_dialog(dlg):
@@ -34,7 +34,7 @@ class ShotPicker(QtWidgets.QDialog):
     def __init__(self, cfg, preselect=None, parent=None):
         super(ShotPicker, self).__init__(parent)
         self.cfg = cfg
-        self.setWindowTitle("ComfyXNuke: Pick Shot")
+        self.setWindowTitle("CC VFX: Pick Shot")
         form = QtWidgets.QFormLayout(self)
 
         self.show_cb = QtWidgets.QComboBox()
@@ -122,7 +122,7 @@ def _resolve(cfg):
         return None
     show, part, seq, shot = dlg.context()
     if not (part and seq and shot):
-        raise RuntimeError("ComfyXNuke: no shot selected. Use 'New Shot...' or the new_shot CLI.")
+        raise RuntimeError("CC VFX: no shot selected. Use 'New Shot...' or the new_shot CLI.")
     if show and show != cfg.get("show"):
         cfg["show"] = show
         pc.set_local("show", show)
@@ -134,7 +134,7 @@ def _choose_type(cfg):
     types = cfg.get("types", [])
     if not types:
         return _ask("Type", "WIP") or "WIP"
-    panel = nuke.Panel("ComfyXNuke: Type")
+    panel = nuke.Panel("CC VFX: Type")
     panel.addEnumerationPulldown("type", " ".join(types))
     if not panel.show():
         return None
@@ -152,7 +152,7 @@ def new_shot_dialog():
         return None
     cfg["show"] = show
     path = pc.ensure_shot(cfg, part, seq, shot)
-    nuke.message("ComfyXNuke created shot:\n{0}".format(path))
+    nuke.message("CC VFX created shot:\n{0}".format(path))
     return path
 
 
@@ -168,7 +168,7 @@ def save_script(task="comp"):
     part, seq, shot = ctx
     path = pc.script_path(cfg, part, seq, shot, task, type_, make_dirs=True)
     nuke.scriptSaveAs(path)
-    nuke.message("ComfyXNuke saved script:\n{0}".format(path))
+    nuke.message("CC VFX saved script:\n{0}".format(path))
     return path
 
 
@@ -203,8 +203,8 @@ def create_write():
     info = pc.parse_name(script)
     if not info:
         nuke.message(
-            "ComfyXNuke: this script isn't saved with a pipeline name yet.\n\n"
-            "Run Comfy Compositor > Pipeline Save Script first, then add the Write.\n"
+            "CC VFX: this script isn't saved with a pipeline name yet.\n\n"
+            "Run CC VFX Menu > Pipeline Save Script first, then add the Write.\n"
             "(current script: {0})".format(script or "unsaved"))
         return None
 
@@ -238,5 +238,5 @@ def create_write():
             except Exception:
                 pass
 
-    nuke.message("ComfyXNuke Write nodes set:\nEXR: {0}\nMOV: {1}".format(r["exr"], r["mov"]))
+    nuke.message("CC VFX Write nodes set:\nEXR: {0}\nMOV: {1}".format(r["exr"], r["mov"]))
     return exr, mov
