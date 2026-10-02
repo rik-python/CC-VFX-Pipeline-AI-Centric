@@ -70,6 +70,16 @@ All `[OK]` means you are good. `[WARN] OCIO` is expected unless you use ACES (se
 
 ---
 
+## Updating
+
+When the pipeline changes, get the latest in one click:
+- **Windows:** double-click **`update.bat`**
+- **mac:** double-click **`update.command`** (first time only, run `chmod +x update.command` so macOS lets you double-click it)
+
+It runs `git pull` and reminds you to **restart Nuke** so the new code loads. Never edit files inside this folder, that is what keeps updates one click forever (local edits cause pull conflicts).
+
+---
+
 ## Daily use
 
 **Make a shot** (from the menu: Comfy Compositor > New Shot, or the CLI):

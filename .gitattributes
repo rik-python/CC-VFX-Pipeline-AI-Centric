@@ -1,0 +1,5 @@
+# Keep line endings correct per-platform so the one-click updaters run everywhere.
+*.command text eol=lf
+*.sh      text eol=lf
+*.bat     text eol=crlf
+*.py      text
