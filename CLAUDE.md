@@ -1,6 +1,6 @@
 # CC Pipeline (AI Centric) - Version 1
 
-Project name: **CC Pipeline (AI Centric)** (Comfy Compositing). Repo/folder: `ComfyXNuke`.
+Project name: **CC Pipeline (AI Centric)** (Comfy Compositing). Repo: `CC-VFX-Pipeline-AI-Centric`. Local folder: `ComfyXNuke`.
 Freelance AI-centric VFX pipeline + manifest-driven Nuke<->ComfyUI panel.
 
 ## What it is

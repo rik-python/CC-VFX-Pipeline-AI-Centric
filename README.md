@@ -3,7 +3,7 @@
 **Version 1**
 
 A **free, AI-centric VFX pipeline for freelancers**, built around Nuke and ComfyUI.
-(Comfy Compositing pipeline. Repo: `ComfyXNuke`.)
+(Comfy Compositing pipeline. Repo: `CC-VFX-Pipeline-AI-Centric`.)
 
 Two parts in one repo:
 1. **Pipeline automation** - one shared config builds an identical folder structure and enforces
@@ -44,13 +44,13 @@ No pip installs. The pipeline code is pure standard library.
 
 **1. Clone the repo**
 ```bash
-git clone https://github.com/rik-python/ComfyXNuke.git
+git clone https://github.com/rik-python/CC-VFX-Pipeline-AI-Centric.git
 ```
 
 **2. Tell Nuke where it is.** Add this line to `~/.nuke/init.py` (create the file if it does not
 exist), using the path where you cloned it:
 ```python
-nuke.pluginAddPath(r"C:\path\to\ComfyXNuke")
+nuke.pluginAddPath(r"C:\path\to\CC-VFX-Pipeline-AI-Centric")
 ```
 
 **3. Set your config (once per machine).** In the repo folder:
