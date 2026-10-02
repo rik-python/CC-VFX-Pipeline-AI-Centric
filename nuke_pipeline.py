@@ -178,26 +178,21 @@ def create_write(task="comp", ext="exr"):
     Auto-derives everything from the OPEN SCRIPT: task, type, version and shot all
     mirror the saved .nk, so the render name matches the script exactly (a
     ..._comp_WIP_..._v03.nk script writes ..._comp_WIP_..._v03.%04d.exr into the comp
-    folder). No re-picking. If the script is unsaved or not pipeline-named, falls back
-    to the shot + type pickers (using the task passed from the menu).
+    folder). No re-picking, no shot dialog. If the script isn't saved with a pipeline
+    name yet, it tells the artist to Pipeline Save Script first and does nothing.
     """
     cfg = pc.load_config()
     script = nuke.root().name()
     info = pc.parse_name(script)
-    if info:                                   # auto: mirror the open script
-        task = info["task"]
-        ext = cfg.get("format", "exr")
-        path = pc.write_path_from_script(cfg, script, ext=ext, frame_pad="%04d", make_dirs=True)
-    else:                                      # fallback: unnamed script -> ask
-        ctx = _resolve(cfg)
-        if not ctx:
-            return None
-        type_ = _choose_type(cfg)
-        if type_ is None:
-            return None
-        part, seq, shot = ctx
-        path = pc.output_path(cfg, part, seq, shot, task, type_, ext=ext, frame_pad="%04d",
-                              version=pc.parse_version(script), make_dirs=True)
+    if not info:
+        nuke.message(
+            "ComfyXNuke: this script isn't saved with a pipeline name yet.\n\n"
+            "Run Comfy Compositor > Pipeline Save Script first, then add the Write.\n"
+            "(current script: {0})".format(script or "unsaved"))
+        return None
+    task = info["task"]
+    ext = cfg.get("format", "exr")
+    path = pc.write_path_from_script(cfg, script, ext=ext, frame_pad="%04d", make_dirs=True)
 
     sel = nuke.selectedNodes()
     w = nuke.nodes.Write(file=path, name="Write_{0}_1".format(task))
