@@ -2,3 +2,12 @@ __pycache__/
 *.pyc
 .superpowers/
 .claude/
+
+# per-machine (never commit a personal config)
+.comfyx_local.json
+
+# render output / scratch, not source
+Exports/
+**/Output/
+*.nk~
+*.autosave

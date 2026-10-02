@@ -1,0 +1,35 @@
+{
+  "pipeline_name": "CC Pipeline (AI Centric)",
+  "pipeline_version": "1",
+  "show": "shwx",
+  "root": "D:/Work/projects",
+  "artist": "rikinp",
+  "resolution": "4K",
+  "colorspace": "ACEScg",
+  "format": "exr",
+  "write_colorspace": "ACES - ACEScg",
+  "naming": "{show}_{part}_{seq}_{shot}_{task}_{type}_{artist}_v{version:02d}",
+  "types": ["SlapComp", "FirstPassSingle", "FirstPassVideo", "WIP", "CF", "TF"],
+  "script_folder": "nuke",
+  "show_structure": [
+    "assets", "reference", "edit", "incoming", "deliveries", "review",
+    "color/luts", "color/cdl", "color/ocio",
+    "ai/datasets/images/raw", "ai/datasets/images/processed",
+    "ai/datasets/videos/raw", "ai/datasets/videos/processed",
+    "ai/datasets/audio/raw", "ai/datasets/audio/processed",
+    "ai/datasets/captions",
+    "ai/prompts", "ai/loras",
+    "ai/models/checkpoints", "ai/models/controlnet", "ai/models/vae", "ai/models/upscale",
+    "ai/training/configs", "ai/training/runs"
+  ],
+  "shot_structure": [
+    "plates", "nuke", "ai_input", "ai_output",
+    "rotopaint", "comp", "elements", "comfyui", "workflow",
+    "cache", "review", "delivery"
+  ],
+  "task_folders": {
+    "rotopaint": "rotopaint",
+    "ai": "ai_output",
+    "comp": "comp"
+  }
+}
